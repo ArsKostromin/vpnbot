@@ -14,7 +14,7 @@ from pathlib import Path
 import os
 
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ["vpnbot.onrender.com"]
 DEBUG = False if os.getenv("RENDER") else True
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
