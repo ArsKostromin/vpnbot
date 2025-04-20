@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: vpn
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn config.wsgi:application"
+    plan: free
+    branch: master
+    envVars:
+      - key: DEBUG
+        value: "False"
+      - key: SECRET_KEY
+        value: "ko1kagnqiksg2h5a78b-1t*6kpm(lf5grsn35wqdn3@#3z0=tw"
