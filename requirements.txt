@@ -5,3 +5,4 @@ gunicorn>=21.2
 python-telegram-bot>=20.0,<21.0
 python-dotenv>=1.0
 drf-yasg>=1.21
+requests
