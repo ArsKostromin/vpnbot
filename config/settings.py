@@ -14,7 +14,7 @@ from pathlib import Path
 import os
 
 
-ALLOWED_HOSTS = ["vpnbot.onrender.com"]
+ALLOWED_HOSTS = ["vpnbot.onrender.com", "localhost", "127.0.0.1", "backend", "backend:8000"]
 DEBUG = False if os.getenv("RENDER") else True
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -30,7 +30,6 @@ SECRET_KEY = 'django-insecure-6nz80nljh=!p(t+dpofg+dese7@kbd_8)k6hcs)l1!cg(it#ur
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
 
 
 # Application definition
