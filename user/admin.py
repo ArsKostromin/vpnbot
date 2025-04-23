@@ -1,20 +1,28 @@
 from django.contrib import admin
 from .models import VPNUser
 
+
 @admin.register(VPNUser)
 class VPNUserAdmin(admin.ModelAdmin):
-    list_display = ('telegram_id', 'vpn_type', 'current_ip', 'created_at', 'vpn_key')  # Отображение в списке
-    list_filter = ('vpn_type', 'created_at')  # Фильтры по бокам
-    search_fields = ('telegram_id', 'vpn_key')  # Поиск
-    readonly_fields = ('created_at', 'vpn_key')  # Только для чтения
-    ordering = ('-created_at',)  # Сортировка по дате создания
+    list_display = (
+        'telegram_id', 
+        'username', 
+        'created_at', 
+        'current_ip',
+        'balance',
+        'is_banned',
+    )
+    list_filter = ('is_banned', 'created_at')
+    search_fields = ('telegram_id', 'username')
+    readonly_fields = ('telegram_id', 'created_at', 'referred_by')
 
     fieldsets = (
         (None, {
-            'fields': ('telegram_id', 'vpn_type', 'current_ip')
+            'fields': ('telegram_id', 'username', 'current_ip')
         }),
-        ('Технические данные', {
-            'fields': ('vpn_key', 'created_at'),
-            'classes': ('collapse',),  # Свернутый блок
+        ('Доп. информация', {
+            'fields': ('referred_by', 'balance', 'is_banned', 'created_at')
         }),
     )
+
+    ordering = ('-created_at',)

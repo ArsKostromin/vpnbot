@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'vpn_api',
     'user',
+    'payments',
 ]
 
 MIDDLEWARE = [
