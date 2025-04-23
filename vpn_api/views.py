@@ -1,39 +1,41 @@
-# import uuid
-# import requests
-# from rest_framework.views import APIView
-# from rest_framework.response import Response
-# from user.models import VPNUser
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from .serializers import SelectTypeSerializer, SelectDurationSerializer, PurchaseSubscriptionSerializer
 
 
+class SelectVPNTypeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = SelectTypeSerializer(data=request.data)
+        if serializer.is_valid():
+            return Response({"message": "Тип VPN выбран", "vpn_type": serializer.validated_data['vpn_type']})
+        return Response(serializer.errors, status=400)
 
 
-# def send_message(chat_id, text):
-#     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-#     requests.post(url, data={"chat_id": chat_id, "text": text})
+class SelectDurationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = SelectDurationSerializer(data=request.data)
+        if serializer.is_valid():
+            return Response({"message": "Длительность выбрана", "duration": serializer.validated_data['duration']})
+        return Response(serializer.errors, status=400)
 
 
-# class TelegramWebhookView(APIView):
-#     def post(self, request):
-#         data = request.data
+class PurchaseSubscriptionView(APIView):
+    permission_classes = [IsAuthenticated]
 
-#         # Проверим, что это обычное сообщение (а не callback, например)
-#         message = data.get("message")
-#         if not message:
-#             return Response({"ok": True})  # просто игнорируем
-
-#         telegram_id = message["from"]["id"]
-#         chat_id = message["chat"]["id"]
-
-#         # Получаем или создаём пользователя
-#         user, created = VPNUser.objects.get_or_create(telegram_id=telegram_id)
-
-#         # Если ключ ещё не создан — создаём
-#         if not user.vpn_key:
-#             key = str(uuid.uuid4())
-#             user.vpn_key = f"vless://{key}@vpn.domain.com:443?flow=xtls-rprx-vision&security=reality&type=tcp&alpn=http/1.1&sni=example.com&fp=chrome&pbk=EXAMPLE_PUBLIC_KEY#VPN"
-#             user.save()
-
-#         # Отправляем пользователю ключ
-#         send_message(chat_id, f"👋 Привет!\nВот твой VPN-ключ:\n\n<code>{user.vpn_key}</code>",)
-
-#         return Response({"ok": True})
+    def post(self, request):
+        serializer = PurchaseSubscriptionSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            subscription = serializer.save()
+            return Response({
+                "message": "Подписка успешно оформлена!",
+                "subscription_id": subscription.id,
+                "vpn_key": subscription.vpn_key.key,
+                "expires": subscription.end_date
+            })
+        return Response(serializer.errors, status=400)

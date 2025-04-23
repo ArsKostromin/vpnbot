@@ -14,5 +14,5 @@ class RegisterUserView(APIView):
         user, created = VPNUser.objects.get_or_create(telegram_id=telegram_id)
         return Response({
             "created": created,
-            "vpn_key": str(user.vpn_key),
+            "vpn_key": str(user.referred_by),
         }, status=status.HTTP_201_CREATED)

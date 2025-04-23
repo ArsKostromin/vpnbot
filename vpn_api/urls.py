@@ -1,9 +1,8 @@
-from django.contrib import admin
-from django.urls import path, include
-from django.urls import re_path
-# from .views import TelegramWebhookView
-
+from django.urls import path
+from .views import SelectVPNTypeView, SelectDurationView, PurchaseSubscriptionView
 
 urlpatterns = [
-    # path("bot/webhook/", TelegramWebhookView.as_view())
+    path('select-type/', SelectVPNTypeView.as_view(), name='select-vpn-type'),
+    path('select-duration/', SelectDurationView.as_view(), name='select-vpn-duration'),
+    path('purchase/', PurchaseSubscriptionView.as_view(), name='purchase-vpn'),
 ]
