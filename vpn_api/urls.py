@@ -1,8 +1,7 @@
 from django.urls import path
-from .views import SelectVPNTypeView, SelectDurationView, PurchaseSubscriptionView
+from .views import BuySubscriptionView, SubscriptionPlanListView
 
 urlpatterns = [
-    path('select-type/', SelectVPNTypeView.as_view(), name='select-vpn-type'),
-    path('select-duration/', SelectDurationView.as_view(), name='select-vpn-duration'),
-    path('purchase/', PurchaseSubscriptionView.as_view(), name='purchase-vpn'),
+    path('plans/', SubscriptionPlanListView.as_view(), name='subscription-plans'),
+    path('buy/', BuySubscriptionView.as_view(), name='buy-subscription'),
 ]

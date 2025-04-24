@@ -12,7 +12,12 @@ class RegisterUserView(APIView):
             return Response({"error": "telegram_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         user, created = VPNUser.objects.get_or_create(telegram_id=telegram_id)
+
+        # Если пользователь уже есть, но его аккаунт заблокирован
+        if not created and user.is_banned:
+            return Response({"error": "Пользователь заблокирован"}, status=status.HTTP_403_FORBIDDEN)
+
         return Response({
             "created": created,
-            "vpn_key": str(user.referred_by),
+            "link_code": user.link_code, 
         }, status=status.HTTP_201_CREATED)

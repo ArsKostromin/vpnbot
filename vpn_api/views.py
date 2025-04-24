@@ -1,41 +1,44 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework import status
-from .serializers import SelectTypeSerializer, SelectDurationSerializer, PurchaseSubscriptionSerializer
+from .serializers import BuySubscriptionSerializer, SubscriptionPlanSerializer
+from .models import Subscription, SubscriptionPlan
+from user.models import VPNUser
 
-
-class SelectVPNTypeView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        serializer = SelectTypeSerializer(data=request.data)
-        if serializer.is_valid():
-            return Response({"message": "Тип VPN выбран", "vpn_type": serializer.validated_data['vpn_type']})
-        return Response(serializer.errors, status=400)
-
-
-class SelectDurationView(APIView):
-    permission_classes = [IsAuthenticated]
+class BuySubscriptionView(APIView):
+    permission_classes = [AllowAny]
 
     def post(self, request):
-        serializer = SelectDurationSerializer(data=request.data)
-        if serializer.is_valid():
-            return Response({"message": "Длительность выбрана", "duration": serializer.validated_data['duration']})
-        return Response(serializer.errors, status=400)
+        telegram_id = request.data.get("telegram_id")
+        if not telegram_id:
+            return Response({"error": "telegram_id обязателен"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = VPNUser.objects.get(telegram_id=telegram_id)
+        except VPNUser.DoesNotExist:
+            return Response({"error": "Пользователь не найден"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = BuySubscriptionSerializer(data=request.data, context={'user': user})
+        serializer.is_valid(raise_exception=True)
+
+        plan = serializer.validated_data['plan']
+        user.balance -= plan.price
+        user.save()
+
+        subscription = Subscription.objects.create(user=user, plan=plan)
+
+        return Response({
+            "message": "Подписка успешно оформлена",
+            "subscription_id": subscription.id,
+            "end_date": subscription.end_date
+        }, status=status.HTTP_201_CREATED)
 
 
-class PurchaseSubscriptionView(APIView):
-    permission_classes = [IsAuthenticated]
+class SubscriptionPlanListView(APIView):
+    permission_classes = [AllowAny]
 
-    def post(self, request):
-        serializer = PurchaseSubscriptionSerializer(data=request.data, context={'request': request})
-        if serializer.is_valid():
-            subscription = serializer.save()
-            return Response({
-                "message": "Подписка успешно оформлена!",
-                "subscription_id": subscription.id,
-                "vpn_key": subscription.vpn_key.key,
-                "expires": subscription.end_date
-            })
-        return Response(serializer.errors, status=400)
+    def get(self, request):
+        plans = SubscriptionPlan.objects.all()
+        serializer = SubscriptionPlanSerializer(plans, many=True)
+        return Response(serializer.data)
