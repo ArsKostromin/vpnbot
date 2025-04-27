@@ -7,4 +7,5 @@ urlpatterns = [
     path('payment-success/', views.success_payment, name='payment-success'),
     path('payment-fail/', views.fail_payment, name='payment-fail'),
     path('api/crypto/webhook/', views.crypto_webhook, name='crypto_webhook'),
+    path('api/crypto/create/', views.create_crypto_payment, name='create_crypto_payment'),
 ]
