@@ -1,3 +1,4 @@
+#vpn_api/models
 from django.db import models
 from django.utils import timezone
 from dateutil.relativedelta import relativedelta
