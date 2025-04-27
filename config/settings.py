@@ -14,7 +14,7 @@ from pathlib import Path
 import os
 
 
-ALLOWED_HOSTS = ["vpnbot.onrender.com", "localhost", "127.0.0.1", "backend", "backend:8000"]
+ALLOWED_HOSTS = ["vpnbot.onrender.com", "localhost", "127.0.0.1", "backend", "backend:8000", 'vpnbot.onrender.com']
 DEBUG = False if os.getenv("RENDER") else True
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -152,3 +152,6 @@ ROBOKASSA_LOGIN = os.getenv('ROBOKASSA_LOGIN')
 ROBOKASSA_IS_TEST=True 
 ROBOKASSA_PASSWORD1 = os.getenv('TEST_PASSWORD1')
 ROBOKASSA_PASSWORD2 = os.getenv('TEST_PASSWORD2')
+
+#cryptobot
+CRYPTOPAY_API_TOKEN = os.getenv("CRYPTOPAY_API_TOKEN")

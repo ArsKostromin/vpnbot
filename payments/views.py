@@ -9,6 +9,10 @@ from django.http import HttpResponse
 from user.models import VPNUser
 from payments.models import Payment
 
+from payments.cryptobot import generate_crypto_payment_link
+from payments.models import Payment
+
+
 ALLOWED_AMOUNTS = [1, 100, 500]
 
 def generate_robokassa_payment_link(payment: Payment):
@@ -107,3 +111,80 @@ def success_payment(request):
 @api_view(["GET", "POST"])
 def fail_payment(request):
     return HttpResponse("<h1>Оплата отменена или ошибка платежа.</h1>")
+
+
+
+@api_view(["POST"])
+def create_crypto_payment(request):
+    telegram_id = request.data.get("telegram_id")
+    amount = request.data.get("amount")
+
+    if not telegram_id:
+        return Response({"error": "telegram_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        amount = int(amount)
+    except (ValueError, TypeError):
+        return Response({"error": "Некорректная сумма."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if amount not in ALLOWED_AMOUNTS:
+        return Response({"error": f"Можно выбрать только {ALLOWED_AMOUNTS} ₽."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user = VPNUser.objects.get(telegram_id=telegram_id)
+    except VPNUser.DoesNotExist:
+        return Response({"error": "Пользователь не найден."}, status=status.HTTP_404_NOT_FOUND)
+
+    last_payment = Payment.objects.order_by('-inv_id').first()
+    next_inv_id = (last_payment.inv_id + 1) if last_payment else 1000
+
+    payment = Payment.objects.create(
+        user=user,
+        inv_id=next_inv_id,
+        amount=Decimal(amount),
+        status=Payment.Status.PENDING
+    )
+
+    try:
+        payment_link = generate_crypto_payment_link(payment)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    return Response({
+        "payment_url": payment_link
+    })
+
+
+@api_view(["POST"])
+def crypto_webhook(request):
+    event = request.data
+
+    # Проверяем что это оплата
+    if event.get("type") != "invoice_paid":
+        return Response({"message": "Not a payment event"}, status=status.HTTP_200_OK)
+
+    payload = event.get("payload")
+    if not payload:
+        return Response({"error": "Missing payload"}, status=status.HTTP_400_BAD_REQUEST)
+
+    inv_id = payload.get("payment_id")
+    amount = Decimal(payload.get("amount", 0))
+
+    try:
+        payment = Payment.objects.get(inv_id=inv_id)
+    except Payment.DoesNotExist:
+        return Response({"error": "Payment not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    if payment.status == Payment.Status.SUCCESS:
+        return Response({"message": "Already processed"}, status=status.HTTP_200_OK)
+
+    # Обновляем баланс пользователя
+    user = payment.user
+    user.balance += amount
+    user.save()
+
+    # Обновляем статус платежа
+    payment.status = Payment.Status.SUCCESS
+    payment.save()
+
+    return Response({"message": "Payment processed"}, status=status.HTTP_200_OK)
