@@ -5,54 +5,66 @@ import random
 import string
 from django.utils import timezone
 
-
+# Функция для генерации случайного кода приглашения (из букв и цифр)
 def generate_link_code():
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
 
 
+# Кастомный менеджер пользователей
 class VPNUserManager(BaseUserManager):
     def create_user(self, email=None, password=None, telegram_id=None, **extra_fields):
+        # Требуется либо email, либо telegram_id
         if not email and not telegram_id:
             raise ValueError("Нужен либо email, либо telegram_id")
 
         if email:
             email = self.normalize_email(email)
 
+        # Создание экземпляра пользователя
         user = self.model(email=email, telegram_id=telegram_id, **extra_fields)
 
+        # Установка пароля (если передан)
         if password:
             user.set_password(password)
 
+        # Генерация кода приглашения, если не задан
         if not user.link_code:
             user.link_code = generate_link_code()
 
+        # Сохраняем пользователя в базу
         user.save(using=self._db)
         return user
 
     def create_superuser(self, email, password=None, **extra_fields):
+        # Создание суперпользователя с флагами is_staff и is_superuser
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         return self.create_user(email=email, password=password, **extra_fields)
 
 
+# Модель пользователя VPN
 class VPNUser(AbstractBaseUser, PermissionsMixin):
-    email = models.EmailField(unique=True, null=True, blank=True)
-    telegram_id = models.BigIntegerField(unique=True, null=True, blank=True)
-    link_code = models.CharField(max_length=12, unique=True, default=generate_link_code)
+    # Основные поля
+    email = models.EmailField(unique=True, null=True, blank=True)  # Email (уникальный, может быть пустым)
+    telegram_id = models.BigIntegerField(unique=True, null=True, blank=True)  # Telegram ID пользователя
+    link_code = models.CharField(max_length=12, unique=True, default=generate_link_code)  # Уникальный код приглашения
 
     # Вспомогательные поля
-    balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    is_banned = models.BooleanField(default=False)
-    is_active = models.BooleanField(default=True)
-    is_staff = models.BooleanField(default=False)
-    date_joined = models.DateTimeField(auto_now_add=True)
-    created_at = models.DateTimeField(default=timezone.now, verbose_name="Дата регистрации")
-    current_ip = models.GenericIPAddressField(blank=True, null=True)
-    
+    balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # Баланс пользователя в рублях
+    is_banned = models.BooleanField(default=False)  # Заблокирован ли пользователь
+    is_active = models.BooleanField(default=True)  # Активен ли пользователь
+    is_staff = models.BooleanField(default=False)  # Может ли пользователь зайти в админку
+    date_joined = models.DateTimeField(auto_now_add=True)  # Дата создания пользователя
+    created_at = models.DateTimeField(default=timezone.now, verbose_name="Дата регистрации")  # Альтернативное поле даты
+    current_ip = models.GenericIPAddressField(blank=True, null=True)  # Текущий IP-адрес пользователя (если нужен)
+
+    # Указываем кастомный менеджер
     objects = VPNUserManager()
 
+    # Уникальный идентификатор пользователя (для логина)
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = []
+    REQUIRED_FIELDS = []  # При создании суперпользователя дополнительных обязательных полей нет
 
     def __str__(self):
+        # Представление объекта в виде строки
         return self.email or f"Telegram User {self.telegram_id}"

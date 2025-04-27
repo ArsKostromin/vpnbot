@@ -7,3 +7,5 @@ python-dotenv>=1.0
 drf-yasg>=1.21
 requests
 python-dateutil>=2.8.2
+celery>=5.3
+redis>=5.0

@@ -40,14 +40,16 @@ class Subscription(models.Model):
             '1y': relativedelta(years=1),
             '3y': relativedelta(years=3),
         }
-        return self.start_date + duration_map.get(self.plan.duration, relativedelta(months=1))
+        duration = duration_map.get(self.plan.duration)
+        if duration is None:
+            raise ValueError(f"Unknown plan duration: {self.plan.duration}")
+        return self.start_date + duration
 
     def save(self, *args, **kwargs):
         if not self.end_date:
             self.end_date = self.calculate_end_date()
+
         if self.end_date and self.end_date < timezone.now():
             self.is_active = False
-        super().save(*args, **kwargs)
 
-    def __str__(self):
-        return f"{self.user} – {self.plan}"
+        super().save(*args, **kwargs)
