@@ -7,11 +7,11 @@ class Payment(models.Model):
         SUCCESS = 'success', 'Успешно'
         FAIL = 'fail', 'Ошибка'
 
-    user = models.ForeignKey(VPNUser, on_delete=models.CASCADE, related_name='payments')
+    user = models.ForeignKey(VPNUser, on_delete=models.CASCADE, related_name='payments', verbose_name='Пользователь')
     inv_id = models.PositiveIntegerField(unique=True)
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
-    created_at = models.DateTimeField(auto_now_add=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Стоимость пополнения')
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING, verbose_name='Статус')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
 
     def __str__(self):
         return f"Payment #{self.inv_id} ({self.status})"

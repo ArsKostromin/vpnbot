@@ -46,17 +46,17 @@ class VPNUserManager(BaseUserManager):
 class VPNUser(AbstractBaseUser, PermissionsMixin):
     # Основные поля
     email = models.EmailField(unique=True, null=True, blank=True)  # Email (уникальный, может быть пустым)
-    telegram_id = models.BigIntegerField(unique=True, null=True, blank=True)  # Telegram ID пользователя
-    link_code = models.CharField(max_length=12, unique=True, default=generate_link_code)  # Уникальный код приглашения
+    telegram_id = models.BigIntegerField(unique=True, null=True, blank=True, verbose_name='Телеграм Id')  # Telegram ID пользователя
+    link_code = models.CharField(max_length=12, unique=True, default=generate_link_code, verbose_name='Для связи с приложением')  # Уникальный код приглашения
 
     # Вспомогательные поля
-    balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # Баланс пользователя в рублях
-    is_banned = models.BooleanField(default=False)  # Заблокирован ли пользователь
-    is_active = models.BooleanField(default=True)  # Активен ли пользователь
-    is_staff = models.BooleanField(default=False)  # Может ли пользователь зайти в админку
-    date_joined = models.DateTimeField(auto_now_add=True)  # Дата создания пользователя
+    balance = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Баланс')  # Баланс пользователя в рублях
+    is_banned = models.BooleanField(default=False, verbose_name='Забанен')  # Заблокирован ли пользователь
+    is_active = models.BooleanField(default=True, verbose_name='Активен')  # Активен ли пользователь
+    is_staff = models.BooleanField(default=False, verbose_name='Админ')  # Может ли пользователь зайти в админку
+    date_joined = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания пользователя')  # Дата создания пользователя
     created_at = models.DateTimeField(default=timezone.now, verbose_name="Дата регистрации")  # Альтернативное поле даты
-    current_ip = models.GenericIPAddressField(blank=True, null=True)  # Текущий IP-адрес пользователя (если нужен)
+    current_ip = models.GenericIPAddressField(blank=True, null=True, verbose_name='Ip')  # Текущий IP-адрес пользователя (если нужен)
 
     # Указываем кастомный менеджер
     objects = VPNUserManager()

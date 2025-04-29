@@ -18,9 +18,9 @@ class SubscriptionPlan(models.Model):
         ('3y', '3 года'),
     ]
 
-    vpn_type = models.CharField(max_length=10, choices=VPN_TYPES)
-    duration = models.CharField(max_length=2, choices=DURATION_CHOICES)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
+    vpn_type = models.CharField(max_length=10, choices=VPN_TYPES, verbose_name='Тип впн')
+    duration = models.CharField(max_length=2, choices=DURATION_CHOICES, verbose_name='Длительность')
+    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Цена')
 
     def __str__(self):
         return f"{self.get_vpn_type_display()} ({self.get_duration_display()}) – {self.price}₽"
@@ -30,13 +30,13 @@ class SubscriptionPlan(models.Model):
         verbose_name = 'Тариф'
 
 class Subscription(models.Model):
-    user = models.ForeignKey(VPNUser, on_delete=models.CASCADE, related_name='subscriptions')
-    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.CASCADE)
-    is_active = models.BooleanField(default=True)
-    start_date = models.DateTimeField(default=timezone.now)
-    end_date = models.DateTimeField(blank=True, null=True)
-    auto_renew = models.BooleanField(default=True)
-    paused = models.BooleanField(default=False)
+    user = models.ForeignKey(VPNUser, on_delete=models.CASCADE, related_name='subscriptions', verbose_name='Пользователь')
+    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.CASCADE, verbose_name='План')
+    is_active = models.BooleanField(default=True, verbose_name='Активна')
+    start_date = models.DateTimeField(default=timezone.now, verbose_name='Дата начала')
+    end_date = models.DateTimeField(blank=True, null=True, verbose_name='Дата окончания')
+    auto_renew = models.BooleanField(default=True, verbose_name='Автопродление')
+    paused = models.BooleanField(default=False, verbose_name='Пауза')
 
     def calculate_end_date(self):
         duration_map = {
