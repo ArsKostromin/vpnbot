@@ -26,7 +26,13 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
 class SubscriptionAdmin(admin.ModelAdmin):
     list_display = ('user', 'plan', 'is_active', 'start_date', 'end_date', 'auto_renew', 'paused')
     list_filter = ('is_active', 'auto_renew', 'paused')
-    search_fields = ('user__email', 'user__telegram_id', 'plan')
+    search_fields = (
+    'user__email',
+    'user__telegram_id',
+    'plan__vpn_type',
+    'plan__duration',
+    'plan__price',
+)
     
     
 from django_celery_beat.models import (
