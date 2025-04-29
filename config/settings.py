@@ -44,6 +44,8 @@ INSTALLED_APPS = [
     'vpn_api',
     'user',
     'payments',
+    'django_celery_beat',
+
 ]
 
 MIDDLEWARE = [
@@ -157,3 +159,12 @@ ROBOKASSA_PASSWORD2 = os.getenv('TEST_PASSWORD2')
 
 #cryptobot
 CRYPTOPAY_API_TOKEN = os.getenv("CRYPTOPAY_API_TOKEN")
+
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    'check-expired-subscriptions-every-2-minutes': {
+        'task': 'vpn_api.tasks.check_expired_subscriptions',
+        'schedule': crontab(minute='*/2'),  # Каждые 5 минут
+    },
+}

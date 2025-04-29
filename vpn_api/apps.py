@@ -6,4 +6,14 @@ class VpnApiConfig(AppConfig):
     name = 'vpn_api'
 
     def ready(self):
-        import vpn_api.signals  # noq
+        from django.contrib import admin
+        from django_celery_beat.models import (
+            PeriodicTask, IntervalSchedule, CrontabSchedule,
+            SolarSchedule, ClockedSchedule
+        )
+
+        for model in [PeriodicTask, IntervalSchedule, CrontabSchedule, SolarSchedule, ClockedSchedule]:
+            try:
+                admin.site.unregister(model)
+            except admin.sites.NotRegistered:
+                pass

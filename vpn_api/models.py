@@ -61,4 +61,4 @@ class Subscription(models.Model):
 
     class Meta:
         verbose_name_plural = 'Подписки'
-        verbose_name = 'Подписка'
+        verbose_name = 'Подписку'
