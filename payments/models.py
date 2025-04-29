@@ -15,3 +15,7 @@ class Payment(models.Model):
 
     def __str__(self):
         return f"Payment #{self.inv_id} ({self.status})"
+
+    class Meta:
+        verbose_name_plural = 'Оплаты'
+        verbose_name = 'Оплата'

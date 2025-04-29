@@ -68,3 +68,7 @@ class VPNUser(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         # Представление объекта в виде строки
         return self.email or f"Telegram User {self.telegram_id}"
+
+    class Meta:
+        verbose_name_plural = 'Пользователи'
+        verbose_name = 'Пользователь'

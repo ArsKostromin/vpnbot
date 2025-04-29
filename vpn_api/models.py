@@ -25,6 +25,10 @@ class SubscriptionPlan(models.Model):
     def __str__(self):
         return f"{self.get_vpn_type_display()} ({self.get_duration_display()}) – {self.price}₽"
 
+    class Meta:
+        verbose_name_plural = 'Тарифы'
+        verbose_name = 'Тариф'
+
 class Subscription(models.Model):
     user = models.ForeignKey(VPNUser, on_delete=models.CASCADE, related_name='subscriptions')
     plan = models.ForeignKey(SubscriptionPlan, on_delete=models.CASCADE)
@@ -54,3 +58,7 @@ class Subscription(models.Model):
             self.is_active = False
 
         super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name_plural = 'Подписки'
+        verbose_name = 'Подписка'
