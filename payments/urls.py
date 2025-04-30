@@ -1,3 +1,4 @@
+#payments/urls
 from django.urls import path
 from payments import views
 
@@ -7,5 +8,5 @@ urlpatterns = [
     path('payment-success/', views.success_payment, name='payment-success'),
     path('payment-fail/', views.fail_payment, name='payment-fail'),
     path('api/crypto/webhook/', views.crypto_webhook, name='crypto_webhook'),
-    path('api/crypto/create/', views.create_crypto_payment, name='create_crypto_payment'),
+    path('api/crypto/create/', views.CreateCryptoPaymentAPIView.as_view(), name='create_crypto_payment'),
 ]

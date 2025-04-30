@@ -1,3 +1,4 @@
+#payments/views
 import hashlib
 from decimal import Decimal
 from django.conf import settings
@@ -8,10 +9,12 @@ from django.http import HttpResponse
 
 from user.models import VPNUser
 from payments.models import Payment
+import uuid  # для генерации уникального inv_id
 
-from payments.cryptobot import generate_crypto_payment_link
+from payments.cryptobot import generate_crypto_payment_link, get_crypto_rub_rate
 from payments.models import Payment
-
+from rest_framework.views import APIView
+import requests
 
 ALLOWED_AMOUNTS = [1, 100, 500]
 
@@ -114,52 +117,50 @@ def fail_payment(request):
 
 
 
-@api_view(["POST"])
-def create_crypto_payment(request):
-    telegram_id = request.data.get("telegram_id")
-    amount = request.data.get("amount")
+#крипта
+from decimal import Decimal, InvalidOperation
 
-    if not telegram_id:
-        return Response({"error": "telegram_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+class CreateCryptoPaymentAPIView(APIView):
+    def post(self, request):
+        telegram_id = request.data.get("telegram_id")
+        amount_rub = request.data.get("amount")
+        asset = request.data.get("asset", "TON")
+        print("amount_rub:", amount_rub, type(amount_rub))
 
-    try:
-        amount = int(amount)
-    except (ValueError, TypeError):
-        return Response({"error": "Некорректная сумма."}, status=status.HTTP_400_BAD_REQUEST)
+        if not amount_rub:
+            return Response({"error": "Поле 'amount' обязательно"}, status=400)
 
-    if amount not in ALLOWED_AMOUNTS:
-        return Response({"error": f"Можно выбрать только {ALLOWED_AMOUNTS} ₽."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            amount_rub = Decimal(amount_rub)
+            if amount_rub <= 0:
+                raise ValueError
+        except (InvalidOperation, ValueError):
+            return Response({"error": "Неверный формат 'amount'"}, status=400)
 
-    try:
-        user = VPNUser.objects.get(telegram_id=telegram_id)
-    except VPNUser.DoesNotExist:
-        return Response({"error": "Пользователь не найден."}, status=status.HTTP_404_NOT_FOUND)
+        user = VPNUser.objects.filter(telegram_id=telegram_id).first()
+        if not user:
+            return Response({"error": "Пользователь не найден"}, status=404)
 
-    last_payment = Payment.objects.order_by('-inv_id').first()
-    next_inv_id = (last_payment.inv_id + 1) if last_payment else 1000
+        last_payment = Payment.objects.order_by('-inv_id').first()
+        next_inv_id = (last_payment.inv_id + 1) if last_payment else 1000
 
-    payment = Payment.objects.create(
-        user=user,
-        inv_id=next_inv_id,
-        amount=Decimal(amount),
-        status=Payment.Status.PENDING
-    )
+        payment = Payment.objects.create(
+            user=user,
+            inv_id=next_inv_id,
+            amount=amount_rub,
+            status=Payment.Status.PENDING,
+            currency=asset,
+        )
 
-    try:
-        payment_link = generate_crypto_payment_link(payment)
-    except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        pay_url = generate_crypto_payment_link(payment, asset, amount_rub)
+        return Response({"payment_url": pay_url, "inv_id": next_inv_id})
 
-    return Response({
-        "payment_url": payment_link
-    })
 
 
 @api_view(["POST"])
 def crypto_webhook(request):
     event = request.data
 
-    # Проверяем что это оплата
     if event.get("type") != "invoice_paid":
         return Response({"message": "Not a payment event"}, status=status.HTTP_200_OK)
 
@@ -178,12 +179,10 @@ def crypto_webhook(request):
     if payment.status == Payment.Status.SUCCESS:
         return Response({"message": "Already processed"}, status=status.HTTP_200_OK)
 
-    # Обновляем баланс пользователя
     user = payment.user
     user.balance += amount
     user.save()
 
-    # Обновляем статус платежа
     payment.status = Payment.Status.SUCCESS
     payment.save()
 

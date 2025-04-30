@@ -35,6 +35,8 @@ class SubscriptionAdmin(admin.ModelAdmin):
 )
     
     
+    
+
 from django_celery_beat.models import (
     PeriodicTask, IntervalSchedule, CrontabSchedule,
     SolarSchedule, ClockedSchedule
