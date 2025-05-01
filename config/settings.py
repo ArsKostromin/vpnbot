@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'vpn_api',
     'user',
     'payments',
+    'coupon',
     'django_celery_beat',
 
 ]

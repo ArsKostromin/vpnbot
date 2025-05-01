@@ -11,19 +11,27 @@ from .serializers import SubscriptionSerializer, UserInfoSerializer
 class RegisterUserView(APIView):
     def post(self, request):
         telegram_id = request.data.get("telegram_id")
+        referral_code = request.data.get("referral_code")  # новый параметр
 
-        # Проверка: передан ли telegram_id
         if not telegram_id:
             return Response({"error": "telegram_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Создание пользователя или получение существующего
         user, created = VPNUser.objects.get_or_create(telegram_id=telegram_id)
 
-        # Если пользователь найден, но он заблокирован
+        # если заблокирован — отказ
         if not created and user.is_banned:
             return Response({"error": "Пользователь заблокирован"}, status=status.HTTP_403_FORBIDDEN)
 
-        # Ответ: создан ли пользователь + его реферальный код
+        # только при первом создании и если указали рефералку
+        if created and referral_code:
+            try:
+                referrer = VPNUser.objects.get(link_code=referral_code)
+                if referrer.id != user.id:
+                    user.referred_by = referrer
+                    user.save()
+            except VPNUser.DoesNotExist:
+                pass  # просто игнорируем неверный код
+
         return Response({
             "created": created,
             "link_code": user.link_code,

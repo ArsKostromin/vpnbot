@@ -1,20 +1,24 @@
-#payments/views
+# payments/views.py
 import hashlib
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from django.conf import settings
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from django.http import HttpResponse
+from rest_framework.views import APIView
 
 from user.models import VPNUser
 from payments.models import Payment
-import uuid  # для генерации уникального inv_id
+from payments.cryptobot import generate_crypto_payment_link
+from payments.utils import apply_payment
 
-from payments.cryptobot import generate_crypto_payment_link, get_crypto_rub_rate
-from payments.models import Payment
-from rest_framework.views import APIView
-import requests
+
+def generate_unique_inv_id():
+    last_payment = Payment.objects.order_by('-inv_id').first()
+    next_inv_id = (last_payment.inv_id + 1) if last_payment else 1000
+    return next_inv_id
+
 
 ALLOWED_AMOUNTS = [1, 100, 500]
 
@@ -53,23 +57,17 @@ def create_payment(request):
 
     user = VPNUser.objects.get(telegram_id=telegram_id)
 
-    # Генерация уникального InvId
-    last_payment = Payment.objects.order_by('-inv_id').first()
-    next_inv_id = (last_payment.inv_id + 1) if last_payment else 1000  # начинаем с 1000
-
-    # Создаём запись платежа
     payment = Payment.objects.create(
         user=user,
-        inv_id=next_inv_id,
+        inv_id=generate_unique_inv_id(),
         amount=Decimal(amount),
-        status=Payment.Status.PENDING
+        status=Payment.Status.PENDING,
+        currency='Рубли'
     )
 
     payment_link = generate_robokassa_payment_link(payment)
 
-    return Response({
-        "payment_url": payment_link
-    })
+    return Response({"payment_url": payment_link})
 
 
 @api_view(["POST"])
@@ -93,14 +91,9 @@ def payment_result(request):
         return Response({"error": "Payment not found."}, status=status.HTTP_404_NOT_FOUND)
 
     if payment.status == Payment.Status.SUCCESS:
-        return Response(f"OK{inv_id}")  # уже обработан
+        return Response(f"OK{inv_id}")
 
-    # Обновляем баланс пользователя
-    user = payment.user
-    user.balance += Decimal(out_sum)
-    user.save()
-
-    # Обновляем статус платежа
+    apply_payment(payment.user, Decimal(out_sum))
     payment.status = Payment.Status.SUCCESS
     payment.save()
 
@@ -111,21 +104,17 @@ def payment_result(request):
 def success_payment(request):
     return HttpResponse("<h1>Оплата прошла успешно! 🎉</h1>")
 
+
 @api_view(["GET", "POST"])
 def fail_payment(request):
     return HttpResponse("<h1>Оплата отменена или ошибка платежа.</h1>")
 
-
-
-#крипта
-from decimal import Decimal, InvalidOperation
 
 class CreateCryptoPaymentAPIView(APIView):
     def post(self, request):
         telegram_id = request.data.get("telegram_id")
         amount_rub = request.data.get("amount")
         asset = request.data.get("asset", "TON")
-        print("amount_rub:", amount_rub, type(amount_rub))
 
         if not amount_rub:
             return Response({"error": "Поле 'amount' обязательно"}, status=400)
@@ -141,20 +130,16 @@ class CreateCryptoPaymentAPIView(APIView):
         if not user:
             return Response({"error": "Пользователь не найден"}, status=404)
 
-        last_payment = Payment.objects.order_by('-inv_id').first()
-        next_inv_id = (last_payment.inv_id + 1) if last_payment else 1000
-
         payment = Payment.objects.create(
             user=user,
-            inv_id=next_inv_id,
+            inv_id=generate_unique_inv_id(),
             amount=amount_rub,
             status=Payment.Status.PENDING,
             currency=asset,
         )
 
         pay_url = generate_crypto_payment_link(payment, asset, amount_rub)
-        return Response({"payment_url": pay_url, "inv_id": next_inv_id})
-
+        return Response({"payment_url": pay_url, "inv_id": payment.inv_id})
 
 
 @api_view(["POST"])
@@ -179,11 +164,31 @@ def crypto_webhook(request):
     if payment.status == Payment.Status.SUCCESS:
         return Response({"message": "Already processed"}, status=status.HTTP_200_OK)
 
-    user = payment.user
-    user.balance += amount
-    user.save()
-
+    apply_payment(payment.user, amount)
     payment.status = Payment.Status.SUCCESS
     payment.save()
 
     return Response({"message": "Payment processed"}, status=status.HTTP_200_OK)
+
+
+class StarPaymentAPIView(APIView):
+    def post(self, request):
+        user_id = request.data.get("user_id")
+        amount = float(request.data.get("amount"))
+
+        user = VPNUser.objects.get(telegram_id=user_id)
+
+        payment = Payment.objects.create(
+            user=user,
+            inv_id=generate_unique_inv_id(),
+            amount=amount,
+            status=Payment.Status.SUCCESS,
+            currency='Tg stars'
+        )
+
+        apply_payment(user, Decimal(amount))
+
+        return Response({
+            "message": "OK",
+            "amount": amount,
+        }, status=status.HTTP_201_CREATED)

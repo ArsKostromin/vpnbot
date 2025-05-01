@@ -57,6 +57,8 @@ class VPNUser(AbstractBaseUser, PermissionsMixin):
     date_joined = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания пользователя')  # Дата создания пользователя
     created_at = models.DateTimeField(default=timezone.now, verbose_name="Дата регистрации")  # Альтернативное поле даты
     current_ip = models.GenericIPAddressField(blank=True, null=True, verbose_name='Ip')  # Текущий IP-адрес пользователя (если нужен)
+    referred_by = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="referrals", verbose_name="Пригласивший"
+)
 
     # Указываем кастомный менеджер
     objects = VPNUserManager()
@@ -72,3 +74,49 @@ class VPNUser(AbstractBaseUser, PermissionsMixin):
     class Meta:
         verbose_name_plural = 'Пользователи'
         verbose_name = 'Пользователь'
+        
+    def apply_coupon(self, coupon_code: str):
+        try:
+            coupon = Coupon.objects.get(code=coupon_code)
+
+            if coupon.is_used:
+                return "Этот промокод уже использован."
+            if coupon.expiration_date < timezone.now():
+                return "Срок действия промокода истёк."
+
+            if coupon.type == 'balance':
+                if coupon.discount_amount is None:
+                    return "Некорректный промокод."
+                self.balance += coupon.discount_amount
+                self.save()
+
+            elif coupon.type == 'subscription':
+                if not coupon.vpn_type or not coupon.duration:
+                    return "Некорректный промокод."
+
+                # Найдём план, соответствующий параметрам промокода
+                try:
+                    plan = SubscriptionPlan.objects.get(
+                        vpn_type=coupon.vpn_type,
+                        duration=coupon.duration
+                    )
+                except SubscriptionPlan.DoesNotExist:
+                    return "Не найден подходящий тарифный план."
+
+                # Создаём подписку
+                subscription = Subscription.objects.create(
+                    user=self,
+                    plan=plan,
+                    auto_renew=False,  # подарочные — без автопродления
+                    is_active=True,
+                )
+                subscription.save()
+
+            coupon.is_used = True
+            coupon.used_by = self
+            coupon.save()
+
+            return "Промокод успешно применён!"
+
+        except Coupon.DoesNotExist:
+            return "Промокод не найден."

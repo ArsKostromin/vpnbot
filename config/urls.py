@@ -7,4 +7,5 @@ urlpatterns = [
     path('vpn/', include('vpn_api.urls')),
     path('user/', include('user.urls')),
     path('payments/', include('payments.urls')),
+    path('coupon/', include('coupon.urls')),
 ]
