@@ -2,35 +2,27 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+
 from .models import VPNUser
 from vpn_api.models import Subscription
-from .serializers import SubscriptionSerializer, UserInfoSerializer
+from .serializers import SubscriptionSerializer, UserInfoSerializer, RegisterUserSerializer
+from .services import get_user_by_telegram_id, register_user_with_referral
 
 
-# Эндпоинт для регистрации пользователя по telegram_id
 class RegisterUserView(APIView):
+    """
+    Эндпоинт для регистрации пользователя по telegram_id и необязательному referral_code.
+    """
     def post(self, request):
-        telegram_id = request.data.get("telegram_id")
-        referral_code = request.data.get("referral_code")  # новый параметр
+        serializer = RegisterUserSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-        if not telegram_id:
-            return Response({"error": "telegram_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+        telegram_id = serializer.validated_data["telegram_id"]
+        referral_code = serializer.validated_data.get("referral_code")
 
-        user, created = VPNUser.objects.get_or_create(telegram_id=telegram_id)
-
-        # если заблокирован — отказ
-        if not created and user.is_banned:
-            return Response({"error": "Пользователь заблокирован"}, status=status.HTTP_403_FORBIDDEN)
-
-        # только при первом создании и если указали рефералку
-        if created and referral_code:
-            try:
-                referrer = VPNUser.objects.get(link_code=referral_code)
-                if referrer.id != user.id:
-                    user.referred_by = referrer
-                    user.save()
-            except VPNUser.DoesNotExist:
-                pass  # просто игнорируем неверный код
+        user, created, error_response = register_user_with_referral(telegram_id, referral_code)
+        if error_response:
+            return error_response
 
         return Response({
             "created": created,
@@ -38,40 +30,28 @@ class RegisterUserView(APIView):
         }, status=status.HTTP_201_CREATED)
 
 
-# Эндпоинт для получения всех подписок пользователя
 class UserSubscriptionsAPIView(APIView):
+    """
+    Эндпоинт для получения всех подписок пользователя по telegram_id.
+    """
     def get(self, request, telegram_id):
-        # Проверка: передан ли telegram_id
-        if not telegram_id:
-            return Response({"error": "telegram_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+        user = get_user_by_telegram_id(telegram_id)
+        if isinstance(user, Response):
+            return user
 
-        try:
-            # Поиск пользователя по telegram_id
-            user = VPNUser.objects.get(telegram_id=telegram_id)
-        except VPNUser.DoesNotExist:
-            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        # Получение всех подписок пользователя
         subscriptions = Subscription.objects.filter(user=user)
-
-        # Сериализация списка подписок
         serializer = SubscriptionSerializer(subscriptions, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-# Эндпоинт для получения баланса и кода привязки пользователя
 class UserBalanceAndLinkAPIView(APIView):
+    """
+    Эндпоинт для получения баланса и кода привязки пользователя по telegram_id.
+    """
     def get(self, request, telegram_id):
-        # Проверка: передан ли telegram_id
-        if not telegram_id:
-            return Response({"error": "telegram_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+        user = get_user_by_telegram_id(telegram_id)
+        if isinstance(user, Response):
+            return user
 
-        try:
-            # Поиск пользователя по telegram_id
-            user = VPNUser.objects.get(telegram_id=telegram_id)
-        except VPNUser.DoesNotExist:
-            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        # Сериализация информации о пользователе (баланс + код привязки)
         serializer = UserInfoSerializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)

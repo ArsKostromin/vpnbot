@@ -5,7 +5,7 @@ def apply_payment(user: VPNUser, amount: Decimal):
     user.balance += amount
     user.save()
 
-    if user.referred_by and not user.got_referral_bonus:
+    if user.referred_by:
         bonus = amount * Decimal('0.10')
         user.referred_by.balance += bonus
         user.referred_by.save()

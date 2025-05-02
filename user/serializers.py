@@ -1,27 +1,40 @@
+# serializers.py
 from rest_framework import serializers
 from vpn_api.models import Subscription
 from .models import VPNUser
 
-# serializers/subscription.py
+
+class RegisterUserSerializer(serializers.Serializer):
+    telegram_id = serializers.CharField(max_length=64)
+    referral_code = serializers.CharField(max_length=32, required=False, allow_blank=True)
+
+    def validate_telegram_id(self, value):
+        if not value.isdigit():
+            raise serializers.ValidationError("telegram_id должен содержать только цифры.")
+        return value
+
+    def validate_referral_code(self, value):
+        if value and not value.isalnum():
+            raise serializers.ValidationError("referral_code должен содержать только буквы и цифры.")
+        return value
+
 
 class SubscriptionSerializer(serializers.ModelSerializer):
-    # Берём поле 'vpn_type' из связанной модели SubscriptionPlan через ForeignKey 'plan'
     vpn_type = serializers.CharField(source='plan.vpn_type')
     duration = serializers.CharField(source='plan.duration')
-    # И цену тоже достаём из связанной модели; обязательно указываем max_digits и decimal_places
     price = serializers.DecimalField(source='plan.price', max_digits=10, decimal_places=2)
 
     class Meta:
-        model = Subscription  # Модель, которую сериализуем
+        model = Subscription
         fields = [
-            'vpn_type',     # Тип VPN (например, solo/double/triple)
-            'duration',     # Длительность подписки (1m/6m/1y/3y)
-            'price',        # Цена подписки
-            'is_active',    # Активна ли подписка сейчас
-            'start_date',   # Дата начала подписки
-            'end_date',     # Дата окончания подписки
-            'auto_renew',   # Включено ли авто-продление
-            'paused',       # Приостановлена ли подписка
+            'vpn_type',
+            'duration',
+            'price',
+            'is_active',
+            'start_date',
+            'end_date',
+            'auto_renew',
+            'paused',
         ]
 
 

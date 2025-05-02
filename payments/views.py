@@ -1,45 +1,30 @@
 # payments/views.py
 import hashlib
 from decimal import Decimal, InvalidOperation
+
 from django.conf import settings
+from django.http import HttpResponse
+from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework import status
-from django.http import HttpResponse
 from rest_framework.views import APIView
 
 from user.models import VPNUser
 from payments.models import Payment
 from payments.cryptobot import generate_crypto_payment_link
 from payments.utils import apply_payment
-
-
-def generate_unique_inv_id():
-    last_payment = Payment.objects.order_by('-inv_id').first()
-    next_inv_id = (last_payment.inv_id + 1) if last_payment else 1000
-    return next_inv_id
-
-
-
-def generate_robokassa_payment_link(payment: Payment):
-    login = settings.ROBOKASSA_LOGIN
-    password1 = settings.ROBOKASSA_PASSWORD1
-    is_test = settings.ROBOKASSA_IS_TEST
-
-    signature_raw = f"{login}:{payment.amount}:{payment.inv_id}:{password1}"
-    signature = hashlib.md5(signature_raw.encode('utf-8')).hexdigest()
-
-    base_url = "https://auth.robokassa.ru/Merchant/Index.aspx"
-    params = f"MerchantLogin={login}&OutSum={payment.amount}&InvId={payment.inv_id}&SignatureValue={signature}"
-
-    if is_test:
-        params += "&IsTest=1"
-
-    return f"{base_url}?{params}"
+from payments.services import (
+    generate_unique_inv_id,
+    generate_robokassa_payment_link,
+    verify_robokassa_signature
+)
 
 
 @api_view(["POST"])
 def create_payment(request):
+    """
+    Создание Robokassa-платежа для пользователя.
+    """
     telegram_id = request.data.get("telegram_id")
     amount = request.data.get("amount")
 
@@ -62,12 +47,14 @@ def create_payment(request):
     )
 
     payment_link = generate_robokassa_payment_link(payment)
-
     return Response({"payment_url": payment_link})
 
 
 @api_view(["GET", "POST"])
 def payment_result(request):
+    """
+    Обработка callback'а от Robokassa после оплаты.
+    """
     out_sum = request.data.get("OutSum")
     inv_id = request.data.get("InvId")
     received_signature = request.data.get("SignatureValue", "").strip()
@@ -75,10 +62,7 @@ def payment_result(request):
     if not out_sum or not inv_id or not received_signature:
         return Response({"error": "Missing required fields."}, status=status.HTTP_400_BAD_REQUEST)
 
-    my_signature_raw = f"{out_sum}:{inv_id}:{settings.ROBOKASSA_PASSWORD2}"
-    my_signature = hashlib.md5(my_signature_raw.encode('utf-8')).hexdigest().upper()
-
-    if received_signature.upper() != my_signature:
+    if not verify_robokassa_signature(out_sum, inv_id, received_signature):
         return Response({"error": "Invalid signature."}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
@@ -98,15 +82,20 @@ def payment_result(request):
 
 @api_view(["GET", "POST"])
 def success_payment(request):
+    """Страница при успешной оплате."""
     return HttpResponse("<h1>Оплата прошла успешно! 🎉</h1>")
 
 
 @api_view(["GET", "POST"])
 def fail_payment(request):
+    """Страница при ошибке оплаты или отмене."""
     return HttpResponse("<h1>Оплата отменена или ошибка платежа.</h1>")
 
 
 class CreateCryptoPaymentAPIView(APIView):
+    """
+    Создание криптоплатежа через Telegram CryptoBot.
+    """
     def post(self, request):
         telegram_id = request.data.get("telegram_id")
         amount_rub = request.data.get("amount")
@@ -140,6 +129,9 @@ class CreateCryptoPaymentAPIView(APIView):
 
 @api_view(["POST"])
 def crypto_webhook(request):
+    """
+    Обработка webhook-а от CryptoBot об успешной оплате.
+    """
     event = request.data
 
     if event.get("type") != "invoice_paid":
@@ -168,6 +160,9 @@ def crypto_webhook(request):
 
 
 class StarPaymentAPIView(APIView):
+    """
+    Внутреннее начисление звёзд пользователю.
+    """
     def post(self, request):
         user_id = request.data.get("user_id")
         amount = float(request.data.get("amount"))
