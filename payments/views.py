@@ -20,7 +20,6 @@ def generate_unique_inv_id():
     return next_inv_id
 
 
-ALLOWED_AMOUNTS = [1, 100, 500]
 
 def generate_robokassa_payment_link(payment: Payment):
     login = settings.ROBOKASSA_LOGIN
@@ -51,9 +50,6 @@ def create_payment(request):
         amount = int(amount)
     except (ValueError, TypeError):
         return Response({"error": "Некорректная сумма."}, status=status.HTTP_400_BAD_REQUEST)
-
-    if amount not in ALLOWED_AMOUNTS:
-        return Response({"error": f"Можно выбрать только {ALLOWED_AMOUNTS} ₽."}, status=status.HTTP_400_BAD_REQUEST)
 
     user = VPNUser.objects.get(telegram_id=telegram_id)
 
