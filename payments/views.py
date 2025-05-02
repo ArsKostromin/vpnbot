@@ -70,7 +70,7 @@ def create_payment(request):
     return Response({"payment_url": payment_link})
 
 
-@api_view(["POST"])
+@api_view(["GET", "POST"])
 def payment_result(request):
     out_sum = request.data.get("OutSum")
     inv_id = request.data.get("InvId")
