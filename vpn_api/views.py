@@ -61,11 +61,10 @@ class BuySubscriptionView(APIView):
             subscription.save(update_fields=['end_date'])
 
         return Response({
-            "message": "Подписка успешно оформлена",
+            "message": f"Подписка успешно оформлена, ваш vless:{subscription.vless}",
             "subscription_id": subscription.id,
             "start_date": subscription.start_date,
             "end_date": subscription.end_date,
-            "vless": subscription.vless
         }, status=status.HTTP_201_CREATED)
 
 
