@@ -27,7 +27,7 @@ def apply_vless_on_server(user_uuid):
 
     # Перезапускаем Xray с контролем ошибок
     try:
-        subprocess.run(["systemctl", "restart", "xray"], check=True)
+        subprocess.run(["sudo", "/usr/local/bin/restart-xray.sh"], check=True)
         print("Xray успешно перезапущен.")
     except subprocess.CalledProcessError as e:
         print("Ошибка при перезапуске Xray:", e)
