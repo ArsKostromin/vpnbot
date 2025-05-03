@@ -3,6 +3,9 @@ from django.db import models
 from django.utils import timezone
 from dateutil.relativedelta import relativedelta
 from user.models import VPNUser
+import uuid
+from django.conf import settings
+from .utils import apply_vless_on_server
 
 class SubscriptionPlan(models.Model):
     VPN_TYPES = [
@@ -37,6 +40,7 @@ class Subscription(models.Model):
     end_date = models.DateTimeField(blank=True, null=True, verbose_name='Дата окончания')
     auto_renew = models.BooleanField(default=True, verbose_name='Автопродление')
     paused = models.BooleanField(default=False, verbose_name='Пауза')
+    vless = models.TextField(blank=True, null=True, verbose_name='VLESS конфиг')
 
     def calculate_end_date(self):
         duration_map = {
@@ -49,6 +53,12 @@ class Subscription(models.Model):
         if duration is None:
             raise ValueError(f"Unknown plan duration: {self.plan.duration}")
         return self.start_date + duration
+    
+    
+    @staticmethod
+    def generate_vless_config(user_uuid, ip, port=80, path="/vless", tag="AnonixVPN"):
+        return f"vless://{user_uuid}@{ip}:{port}?encryption=none&type=ws&security=none&path={path}#{tag}"
+
 
     def save(self, *args, **kwargs):
         if not self.end_date:
@@ -57,8 +67,19 @@ class Subscription(models.Model):
         if self.end_date and self.end_date < timezone.now():
             self.is_active = False
 
+        # Генерация UUID, если еще не задан
+        if not self.vless:
+            user_uuid = str(uuid.uuid4())
+            self.vless = self.generate_vless_config(
+                user_uuid=user_uuid,
+                ip=settings.SERVER_IP  # Задай IP в settings.py, например: SERVER_IP = "159.198.77.222"
+            )
+            # Обновить конфиг на сервере:
+            apply_vless_on_server(user_uuid)
+
         super().save(*args, **kwargs)
 
     class Meta:
         verbose_name_plural = 'Подписки'
         verbose_name = 'Подписку'
+        

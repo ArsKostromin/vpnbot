@@ -58,7 +58,9 @@ class VPNUser(AbstractBaseUser, PermissionsMixin):
     created_at = models.DateTimeField(default=timezone.now, verbose_name="Дата регистрации")  # Альтернативное поле даты
     current_ip = models.GenericIPAddressField(blank=True, null=True, verbose_name='Ip')  # Текущий IP-адрес пользователя (если нужен)
     referred_by = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="referrals", verbose_name="Пригласивший")
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, verbose_name="UUID")
 
+    
     # Указываем кастомный менеджер
     objects = VPNUserManager()
 

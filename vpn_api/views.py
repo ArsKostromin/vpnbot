@@ -8,6 +8,7 @@ from .models import Subscription, SubscriptionPlan
 from user.models import VPNUser
 from django.utils import timezone
 from datetime import timedelta
+# from .utils import generate_vless_link  # пусть функция будет там
 
 class BuySubscriptionView(APIView):
     permission_classes = [AllowAny]
@@ -75,3 +76,21 @@ class SubscriptionPlanListView(APIView):
         plans = SubscriptionPlan.objects.all()
         serializer = SubscriptionPlanSerializer(plans, many=True)
         return Response(serializer.data)
+
+
+
+
+
+# class VLESSConfigView(APIView):
+#     permission_classes = [AllowAny]
+    
+#     def get(self, request):
+#         telegram_id = request.data.get("telegram_id")
+#         user = VPNUser.objects.get(telegram_id=telegram_id)
+#         active_sub = user.subscriptions.filter(is_active=True, end_date__gte=timezone.now()).first()
+
+#         if not active_sub:
+#             return Response({"error": "Нет активной подписки"}, status=403)
+
+#         config = generate_vless_link(user)
+#         return Response({"vless": config})

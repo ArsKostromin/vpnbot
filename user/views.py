@@ -1,4 +1,5 @@
 # views.py
+import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -9,10 +10,14 @@ from .serializers import SubscriptionSerializer, UserInfoSerializer, RegisterUse
 from .services import get_user_by_telegram_id, register_user_with_referral
 
 
+logger = logging.getLogger(__name__)
+
+
 class RegisterUserView(APIView):
     """
     Эндпоинт для регистрации пользователя по telegram_id и необязательному referral_code.
     """
+
     def post(self, request):
         serializer = RegisterUserSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -20,9 +25,14 @@ class RegisterUserView(APIView):
         telegram_id = serializer.validated_data["telegram_id"]
         referral_code = serializer.validated_data.get("referral_code")
 
+        logger.info(f"Получен запрос на регистрацию: telegram_id={telegram_id}, referral_code={referral_code}")
+        print("Реферал код:", referral_code)
         user, created, error_response = register_user_with_referral(telegram_id, referral_code)
         if error_response:
+            logger.warning(f"Ошибка при регистрации пользователя {telegram_id}: {error_response.data}")
             return error_response
+
+        logger.info(f"Пользователь {telegram_id} зарегистрирован. New: {created}, link_code: {user.link_code}")
 
         return Response({
             "created": created,

@@ -2,6 +2,9 @@
 from rest_framework.response import Response
 from rest_framework import status
 from .models import VPNUser
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def get_user_by_telegram_id(telegram_id):
@@ -26,13 +29,13 @@ def register_user_with_referral(telegram_id, referral_code=None):
     if not created and user.is_banned:
         return user, created, Response({"error": "Пользователь заблокирован"}, status=status.HTTP_403_FORBIDDEN)
 
-    if created and referral_code:
+    if referral_code and not user.referred_by:
         try:
             referrer = VPNUser.objects.get(link_code=referral_code)
             if referrer.id != user.id:
                 user.referred_by = referrer
                 user.save()
         except VPNUser.DoesNotExist:
-            pass  # игнорируем неверный код
+            logger.warning(f"Invalid referral code: {referral_code}")
 
     return user, created, None

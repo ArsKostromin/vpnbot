@@ -174,3 +174,6 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(minute='*/2'),  # Каждые 5 минут
     },
 }
+
+
+SERVER_IP = "159.198.77.222"
