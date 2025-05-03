@@ -27,7 +27,7 @@ def apply_vless_on_server(user_uuid):
 
     # Перезапускаем Xray с контролем ошибок
     try:
-        subprocess.run(["/usr/local/bin/restart-xray.sh"], check=True)
+        subprocess.run(["docker", "restart", "xray-container"], check=True)
 
         print("Xray успешно перезапущен.")
     except subprocess.CalledProcessError as e:
