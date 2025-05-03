@@ -64,7 +64,8 @@ class BuySubscriptionView(APIView):
             "message": "Подписка успешно оформлена",
             "subscription_id": subscription.id,
             "start_date": subscription.start_date,
-            "end_date": subscription.end_date
+            "end_date": subscription.end_date,
+            "vless": subscription.vless
         }, status=status.HTTP_201_CREATED)
 
 
