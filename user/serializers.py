@@ -35,6 +35,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             'end_date',
             'auto_renew',
             'paused',
+            'vless',
         ]
 
 
