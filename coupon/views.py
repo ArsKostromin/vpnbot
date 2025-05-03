@@ -14,7 +14,6 @@ class ApplyCouponView(APIView):
         code = request.data.get("code", "").strip()
         telegram_id = request.data.get("telegram_id")
 
-        # Проверка telegram_id
         if not telegram_id:
             return Response({"error": "telegram_id обязателен"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -23,14 +22,18 @@ class ApplyCouponView(APIView):
         except VPNUser.DoesNotExist:
             return Response({"error": "Пользователь не найден"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Проверка наличия промокода
         if not code:
             return Response({"detail": "Промокод не указан."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Бизнес-логика вынесена в отдельный сервис
         result = apply_coupon_to_user(user, code)
 
-        return Response(result["data"], status=result["status"])
+        # Вставляем ссылку в ответ, если она есть
+        response_data = result.get("data", {})
+        if hasattr(user, "subscription") and user.subscription:
+            response_data["vless"] = user.subscription.vless
+
+        return Response(response_data, status=result["status"])
+
 
 
 @api_view(['POST'])
