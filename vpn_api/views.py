@@ -9,6 +9,7 @@ from user.models import VPNUser
 from django.utils import timezone
 from datetime import timedelta
 # from .utils import generate_vless_link  # пусть функция будет там
+from django.shortcuts import render
 
 class BuySubscriptionView(APIView):
     permission_classes = [AllowAny]
@@ -45,9 +46,6 @@ class BuySubscriptionView(APIView):
         user.balance -= plan.price
         user.save()
 
-        # Проверка: это первая подписка?
-        is_first_subscription = not user.subscriptions.exists()
-
         # Создаём подписку
         subscription = Subscription.objects.create(
             user=user,
@@ -55,16 +53,12 @@ class BuySubscriptionView(APIView):
             start_date=start_date,
         )
 
-        # Добавим +5 дней, если первая подписка
-        if is_first_subscription:
-            subscription.end_date += timedelta(days=5)
-            subscription.save(update_fields=['end_date'])
-
         return Response({
-            "message": f"Подписка успешно оформлена, ваш vless: {subscription.vless}",
+            "message": f"Подписка успешно оформлена",
             "subscription_id": subscription.id,
             "start_date": subscription.start_date,
             "end_date": subscription.end_date,
+            "vless": subscription.vless
         }, status=status.HTTP_201_CREATED)
 
 
@@ -81,16 +75,5 @@ class SubscriptionPlanListView(APIView):
 
 
 
-# class VLESSConfigView(APIView):
-#     permission_classes = [AllowAny]
-    
-#     def get(self, request):
-#         telegram_id = request.data.get("telegram_id")
-#         user = VPNUser.objects.get(telegram_id=telegram_id)
-#         active_sub = user.subscriptions.filter(is_active=True, end_date__gte=timezone.now()).first()
-
-#         if not active_sub:
-#             return Response({"error": "Нет активной подписки"}, status=403)
-
-#         config = generate_vless_link(user)
-#         return Response({"vless": config})
+def index(request):
+    return render(request, 'index.html')
