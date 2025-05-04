@@ -2,7 +2,7 @@ import re
 from django.core.management.base import BaseCommand
 from proxy_logs.models import ProxyLog
 
-LOG_PATH = "/var/log/squid/access.log"
+LOG_PATH = "/app/access.log"
 
 LOG_PATTERN = re.compile(
     r'(?P<unix_ts>\d+\.\d+)\s+(?P<duration>\d+)\s+(?P<ip>[^\s]+)\s+(?P<status>[^\s]+)\s+(?P<bytes>\d+)\s+CONNECT\s+(?P<domain>[^:]+)'
