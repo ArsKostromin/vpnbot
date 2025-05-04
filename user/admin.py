@@ -6,7 +6,7 @@ from .models import VPNUser
 class VPNUserAdmin(admin.ModelAdmin):
     list_display = (
         'id', 'email', 'telegram_id', 'balance', 'is_banned', 'is_active',
-        'current_ip', 'created_at', 'referrals_list'  # ← добавлено здесь
+        'current_ip', 'created_at', 'referrals_list', 'subscriptions_list'  # ← добавлено
     )
     list_filter = ('is_banned', 'is_active', 'created_at')
     search_fields = ('email', 'telegram_id', 'current_ip', 'id')
@@ -29,3 +29,19 @@ class VPNUserAdmin(admin.ModelAdmin):
             ((f"{ref.telegram_id} / {ref.email or 'no email'}",) for ref in referrals)
         )
     referrals_list.short_description = "Рефералы"
+
+    def subscriptions_list(self, obj):
+        subscriptions = obj.subscriptions.select_related('plan').all()
+        if not subscriptions:
+            return "-"
+        return format_html_join(
+            '\n', "<div>{} — {} ({})</div>",
+            (
+                (
+                    sub.plan.vpn_type if sub.plan else '–',
+                    sub.start_date.strftime('%Y-%m-%d'),
+                    "Активна" if sub.is_active else "Неактивна"
+                ) for sub in subscriptions
+            )
+        )
+    subscriptions_list.short_description = "Подписки"
