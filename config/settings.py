@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'payments',
     'coupon',
     'django_celery_beat',
+    'proxy_logs',
 
 ]
 
