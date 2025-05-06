@@ -13,7 +13,6 @@ class Coupon(models.Model):
     VPN_TYPES = [
         ('solo', 'Одиночный VPN'),
         ('double', 'Двойной VPN'),
-        ('triple', 'Тройной VPN'),
     ]
 
     DURATION_CHOICES = [
