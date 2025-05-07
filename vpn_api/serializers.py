@@ -3,16 +3,9 @@ from rest_framework import serializers
 from .models import Subscription, SubscriptionPlan
 
 class SubscriptionPlanSerializer(serializers.ModelSerializer):
-    vpn_type_display = serializers.CharField(source='get_vpn_type_display', read_only=True)
-    duration_display = serializers.CharField(source='get_duration_display', read_only=True)
-
     class Meta:
         model = SubscriptionPlan
-        fields = [
-            'id', 'vpn_type', 'vpn_type_display', 
-            'duration', 'duration_display', 'price'
-        ]
-
+        fields = '__all__'
 
 class BuySubscriptionSerializer(serializers.Serializer):
     plan_id = serializers.IntegerField()
@@ -29,3 +22,4 @@ class BuySubscriptionSerializer(serializers.Serializer):
 
         attrs['plan'] = plan
         return attrs
+

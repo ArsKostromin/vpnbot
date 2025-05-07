@@ -1,19 +1,12 @@
+# vpn_api/admin.py
 from django.contrib import admin
 from .models import SubscriptionPlan, Subscription
 
 @admin.register(SubscriptionPlan)
 class SubscriptionPlanAdmin(admin.ModelAdmin):
-    list_display = ('vpn_type_display', 'duration_display', 'price')
+    list_display = ('vpn_type', 'duration', 'price')
     list_filter = ('vpn_type', 'duration')
     search_fields = ('vpn_type',)
-
-    def vpn_type_display(self, obj):
-        return obj.get_vpn_type_display()
-    vpn_type_display.short_description = "Категория"
-
-    def duration_display(self, obj):
-        return obj.get_duration_display()
-    duration_display.short_description = "Длительность"
 
 @admin.register(Subscription)
 class SubscriptionAdmin(admin.ModelAdmin):
@@ -21,12 +14,13 @@ class SubscriptionAdmin(admin.ModelAdmin):
         'user', 'plan', 'is_active', 'start_date', 'end_date', 
         'auto_renew', 'paused', 'short_vless_link'
     )
-    list_filter = ('is_active', 'auto_renew', 'paused', 'plan__vpn_type')
+    list_filter = ('is_active', 'auto_renew', 'paused')
     search_fields = (
         'user__email',
         'user__telegram_id',
         'plan__vpn_type',
         'plan__duration',
+        'plan__price',
     )
 
     readonly_fields = ('vless',)
@@ -36,8 +30,10 @@ class SubscriptionAdmin(admin.ModelAdmin):
             return obj.vless[:40] + "..."
         return "-"
     short_vless_link.short_description = "VLESS"
+    
+    
+    
 
-# Отключаем лишнее из django-celery-beat
 from django_celery_beat.models import (
     PeriodicTask, IntervalSchedule, CrontabSchedule,
     SolarSchedule, ClockedSchedule
