@@ -9,8 +9,10 @@ from .utils import apply_vless_on_server
 
 class SubscriptionPlan(models.Model):
     VPN_TYPES = [
-        ('solo', 'Одиночный VPN'),
-        ('double', 'Двойной VPN'),
+        ('socials', '🌭 Для YouTube и соцсетей'),
+        ('torrents', 'Для торрентов'),
+        ('secure', '🛡 Двойное шифрование'),
+        ('country', '🌐 Выбор по стране'),
     ]
 
     DURATION_CHOICES = [
