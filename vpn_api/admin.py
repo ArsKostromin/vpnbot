@@ -3,13 +3,13 @@ from .models import SubscriptionPlan, Subscription
 
 @admin.register(SubscriptionPlan)
 class SubscriptionPlanAdmin(admin.ModelAdmin):
-    list_display = ('category_display', 'duration_display', 'price')
-    list_filter = ('category', 'duration')
-    search_fields = ('category',)
+    list_display = ('vpn_type_display', 'duration_display', 'price')
+    list_filter = ('vpn_type', 'duration')
+    search_fields = ('vpn_type',)
 
-    def category_display(self, obj):
-        return obj.get_category_display()
-    category_display.short_description = "Категория"
+    def vpn_type_display(self, obj):
+        return obj.get_vpn_type_display()
+    vpn_type_display.short_description = "Категория"
 
     def duration_display(self, obj):
         return obj.get_duration_display()
@@ -21,11 +21,11 @@ class SubscriptionAdmin(admin.ModelAdmin):
         'user', 'plan', 'is_active', 'start_date', 'end_date', 
         'auto_renew', 'paused', 'short_vless_link'
     )
-    list_filter = ('is_active', 'auto_renew', 'paused', 'plan__category')
+    list_filter = ('is_active', 'auto_renew', 'paused', 'plan__vpn_type')
     search_fields = (
         'user__email',
         'user__telegram_id',
-        'plan__category',
+        'plan__vpn_type',
         'plan__duration',
     )
 

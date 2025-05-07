@@ -7,7 +7,7 @@ from django.conf import settings
 from .utils import apply_vless_on_server
 
 class SubscriptionPlan(models.Model):
-    CATEGORY_CHOICES = [
+    vpn_type_CHOICES = [
         ('youtube', 'Для YouTube и соцсетей'),
         ('torrents', 'Для торрентов'),
         ('secure', 'Двойное шифрование'),
@@ -21,12 +21,12 @@ class SubscriptionPlan(models.Model):
         ('3y', '3 года'),
     ]
 
-    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='youtube', verbose_name='Категория')
+    vpn_type = models.CharField(max_length=20, choices=vpn_type_CHOICES, default='youtube', verbose_name='Категория')
     duration = models.CharField(max_length=2, choices=DURATION_CHOICES, verbose_name='Длительность')
     price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Цена')
 
     def __str__(self):
-        return f"{self.get_category_display()} ({self.get_duration_display()}) – {self.price}₽"
+        return f"{self.get_vpn_type_display()} ({self.get_duration_display()}) – {self.price}₽"
 
     class Meta:
         verbose_name_plural = 'Тарифы'

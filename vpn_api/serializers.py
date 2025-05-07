@@ -3,13 +3,13 @@ from rest_framework import serializers
 from .models import Subscription, SubscriptionPlan
 
 class SubscriptionPlanSerializer(serializers.ModelSerializer):
-    category_display = serializers.CharField(source='get_category_display', read_only=True)
+    vpn_type_display = serializers.CharField(source='get_vpn_type_display', read_only=True)
     duration_display = serializers.CharField(source='get_duration_display', read_only=True)
 
     class Meta:
         model = SubscriptionPlan
         fields = [
-            'id', 'category', 'category_display', 
+            'id', 'vpn_type', 'vpn_type_display', 
             'duration', 'duration_display', 'price'
         ]
 
