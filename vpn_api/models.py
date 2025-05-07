@@ -1,4 +1,3 @@
-#vpn_api/models
 from django.db import models
 from django.utils import timezone
 from dateutil.relativedelta import relativedelta
@@ -8,9 +7,11 @@ from django.conf import settings
 from .utils import apply_vless_on_server
 
 class SubscriptionPlan(models.Model):
-    VPN_TYPES = [
-        ('solo', 'Одиночный VPN'),
-        ('double', 'Двойной VPN'),
+    CATEGORY_CHOICES = [
+        ('youtube', 'Для YouTube и соцсетей'),
+        ('torrents', 'Для торрентов'),
+        ('secure', 'Двойное шифрование'),
+        ('country', 'Выбор по стране'),
     ]
 
     DURATION_CHOICES = [
@@ -20,12 +21,12 @@ class SubscriptionPlan(models.Model):
         ('3y', '3 года'),
     ]
 
-    vpn_type = models.CharField(max_length=10, choices=VPN_TYPES, verbose_name='Тип впн')
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='youtube', verbose_name='Категория')
     duration = models.CharField(max_length=2, choices=DURATION_CHOICES, verbose_name='Длительность')
     price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Цена')
 
     def __str__(self):
-        return f"{self.get_vpn_type_display()} ({self.get_duration_display()}) – {self.price}₽"
+        return f"{self.get_category_display()} ({self.get_duration_display()}) – {self.price}₽"
 
     class Meta:
         verbose_name_plural = 'Тарифы'
@@ -52,12 +53,10 @@ class Subscription(models.Model):
         if duration is None:
             raise ValueError(f"Unknown plan duration: {self.plan.duration}")
         return self.start_date + duration
-    
-    
+
     @staticmethod
     def generate_vless_config(user_uuid, ip, port=80, path="/vless", tag="AnonixVPN"):
         return f"vless://{user_uuid}@{ip}:{port}?encryption=none&type=ws&security=none&path={path}#{tag}"
-
 
     def save(self, *args, **kwargs):
         if not self.end_date:
@@ -66,14 +65,12 @@ class Subscription(models.Model):
         if self.end_date and self.end_date < timezone.now():
             self.is_active = False
 
-        # Генерация UUID, если еще не задан
         if not self.vless:
             user_uuid = str(uuid.uuid4())
             self.vless = self.generate_vless_config(
                 user_uuid=user_uuid,
-                ip=settings.SERVER_IP  # Задай IP в settings.py, например: SERVER_IP = "159.198.77.222"
+                ip=settings.SERVER_IP
             )
-            # Обновить конфиг на сервере:
             apply_vless_on_server(user_uuid)
 
         super().save(*args, **kwargs)
@@ -81,4 +78,3 @@ class Subscription(models.Model):
     class Meta:
         verbose_name_plural = 'Подписки'
         verbose_name = 'Подписку'
-        
