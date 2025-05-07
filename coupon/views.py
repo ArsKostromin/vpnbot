@@ -26,14 +26,12 @@ class ApplyCouponView(APIView):
             return Response({"detail": "Промокод не указан."}, status=status.HTTP_400_BAD_REQUEST)
 
         result = apply_coupon_to_user(user, code)
-
-        # Вставляем ссылку в ответ, если она есть
         response_data = result.get("data", {})
+
         if hasattr(user, "subscription") and user.subscription:
             response_data["vless"] = user.subscription.vless
 
         return Response(response_data, status=result["status"])
-
 
 
 @api_view(['POST'])
@@ -48,7 +46,5 @@ def generate_promo_code(request):
     except VPNUser.DoesNotExist:
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
-    # Логика генерации промокода вынесена
     promo_code = generate_coupon_for_user(user)
-
     return Response({"promo_code": promo_code})

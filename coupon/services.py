@@ -5,13 +5,11 @@ from rest_framework import status
 from vpn_api.models import SubscriptionPlan, Subscription
 from .models import Coupon
 
-
 def apply_coupon_to_user(user, code):
     try:
         coupon = Coupon.objects.get(code__iexact=code)
     except Coupon.DoesNotExist:
         return {"data": {"detail": "Неверный промокод."}, "status": status.HTTP_404_NOT_FOUND}
-
 
     if coupon.is_used:
         return {"data": {"detail": "Промокод уже был использован."}, "status": status.HTTP_400_BAD_REQUEST}
@@ -31,7 +29,7 @@ def apply_coupon_to_user(user, code):
 
     elif coupon.type == "subscription":
         plan = SubscriptionPlan.objects.filter(
-            vpn_type=coupon.vpn_type, duration=coupon.duration
+            vpn_usage=coupon.vpn_usage, duration=coupon.duration
         ).first()
 
         if not plan:
@@ -40,7 +38,6 @@ def apply_coupon_to_user(user, code):
                 "status": status.HTTP_400_BAD_REQUEST,
             }
 
-        # Создаём подписку
         Subscription.objects.create(user=user, plan=plan)
 
         coupon.is_used = True
@@ -62,7 +59,7 @@ def generate_coupon_for_user(user):
         code=code,
         type='subscription',
         expiration_date=datetime.now() + timedelta(days=5),
-        vpn_type='solo',
+        vpn_usage='youtube',  # можно заменить на любую цель
         duration='1m',
         is_used=False
     )
