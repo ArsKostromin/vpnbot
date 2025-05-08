@@ -57,7 +57,7 @@ class Subscription(models.Model):
     
     
     @staticmethod
-    def generate_vless_config(user_uuid, ip, port=80, path="/vless", tag="AnonixVPN"):
+    def generate_vless_config(user_uuid, ip, port=12345, path="/vless", tag="AnonixVPN"):
         return f"vless://{user_uuid}@{ip}:{port}?encryption=none&type=ws&security=none&path={path}#{tag}"
 
 
