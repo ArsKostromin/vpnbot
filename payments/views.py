@@ -132,22 +132,23 @@ class CreateCryptoPaymentAPIView(APIView):
 
 @api_view(["POST"])
 def crypto_webhook(request):
-    """
-    Обработка webhook-а от CryptoBot об успешной оплате.
-    """
     event = request.data
-    logger.info(f"[Webhook] Получено событие: {event}")
-    logger.warning(f"[Webhook DEBUG] Incoming event: {request.data}")
+    logger.warning(f"[Webhook DEBUG] Incoming event: {event}")
 
-
-    if event.get("type") != "invoice_paid":
+    if event.get("update_type") != "invoice_paid":
         logger.warning("[Webhook] Не является событием оплаты")
         return Response({"message": "Not a payment event"}, status=status.HTTP_200_OK)
 
-    payload = event.get("payload")
-    if not payload:
+    payload_data = event.get("payload")
+    if not payload_data:
         logger.error("[Webhook] Payload отсутствует")
         return Response({"error": "Missing payload"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # payload внутри payload
+    payload = payload_data.get("payload")
+    if not payload:
+        logger.error("[Webhook] Внутренний payload отсутствует")
+        return Response({"error": "Missing inner payload"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         inv_id = int(payload)
