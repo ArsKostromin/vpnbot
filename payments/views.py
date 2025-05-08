@@ -137,22 +137,20 @@ def crypto_webhook(request):
     if event.get("type") != "invoice_paid":
         return Response({"message": "Not a payment event"}, status=status.HTTP_200_OK)
 
-    payload = event.get("payload")
-    if not payload:
+    inv_id = event.get("payload")  # ← тут теперь строка, тип str
+    if not inv_id:
         return Response({"error": "Missing payload"}, status=status.HTTP_400_BAD_REQUEST)
 
-    inv_id = payload.get("payment_id")
-    amount = Decimal(payload.get("amount", 0))
-
     try:
+        inv_id = int(inv_id)  # потому что в модели `inv_id` — это PositiveIntegerField
         payment = Payment.objects.get(inv_id=inv_id)
-    except Payment.DoesNotExist:
+    except (ValueError, Payment.DoesNotExist):
         return Response({"error": "Payment not found"}, status=status.HTTP_404_NOT_FOUND)
 
     if payment.status == Payment.Status.SUCCESS:
         return Response({"message": "Already processed"}, status=status.HTTP_200_OK)
 
-    apply_payment(payment.user, amount)
+    apply_payment(payment.user, payment.amount)
     payment.status = Payment.Status.SUCCESS
     payment.save()
 
