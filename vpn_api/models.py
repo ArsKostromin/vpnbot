@@ -70,7 +70,7 @@ class Subscription(models.Model):
             user_uuid = str(uuid.uuid4())
             self.vless = self.generate_vless_config(
                 user_uuid=user_uuid,
-                domain=settings.SERVER_DOMAIN  # ← используем domain, не ip
+                domain=settings.SERVER_IP  # ← используем domain, не ip
             )
             apply_vless_on_server(user_uuid)
 
