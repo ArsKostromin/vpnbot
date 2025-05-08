@@ -14,15 +14,7 @@ from pathlib import Path
 import os
 
 
-ALLOWED_HOSTS = [
-    "vpnbot.onrender.com",
-    "localhost",
-    "127.0.0.1",
-    "backend",
-    "backend:8000",
-    "159.198.77.222",
-    "server2.anonixvpn.space",  # добавь это
-]
+ALLOWED_HOSTS = ['*']
 
 CSRF_TRUSTED_ORIGINS = [
     "https://server2.anonixvpn.space",
