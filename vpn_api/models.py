@@ -58,7 +58,7 @@ class Subscription(models.Model):
 
 
     @staticmethod
-    def generate_vless_config(user_uuid, domain="vpn.example.com", port=443, path="/vless", tag="AnonixVPN"):
+    def generate_vless_config(user_uuid, domain="server2.anonixvpn.space", port=443, path="/vless", tag="AnonixVPN"):
         encoded_path = urllib.parse.quote(path)
         return f"vless://{user_uuid}@{domain}:{port}?encryption=none&type=ws&security=tls&path={encoded_path}#{tag}"
 
@@ -74,7 +74,7 @@ class Subscription(models.Model):
             user_uuid = str(uuid.uuid4())
             self.vless = self.generate_vless_config(
                 user_uuid=user_uuid,
-                domain=settings.SERVER_IP  # ← используем domain, не ip
+                domain=settings.SERVER_DOMAIN  # ← используем domain, не ip
             )
             apply_vless_on_server(user_uuid)
 

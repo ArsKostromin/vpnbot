@@ -183,3 +183,4 @@ CELERY_BEAT_SCHEDULE = {
 
 
 SERVER_IP = "159.198.77.222"
+SERVER_DOMAIN = "server2.anonixvpn.space"
