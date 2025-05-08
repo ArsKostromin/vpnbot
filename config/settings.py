@@ -23,6 +23,11 @@ ALLOWED_HOSTS = [
     "159.198.77.222",
     "server2.anonixvpn.space",  # добавь это
 ]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://server2.anonixvpn.space",
+]
+
 DEBUG = False if os.getenv("RENDER") else True
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
