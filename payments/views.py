@@ -137,7 +137,8 @@ def crypto_webhook(request):
     """
     event = request.data
     logger.info(f"[Webhook] Получено событие: {event}")
-    print("[Webhook DEBUG] Incoming event:", request.data)
+    logger.warning(f"[Webhook DEBUG] Incoming event: {request.data}")
+
 
     if event.get("type") != "invoice_paid":
         logger.warning("[Webhook] Не является событием оплаты")
