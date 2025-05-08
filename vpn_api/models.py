@@ -54,13 +54,10 @@ class Subscription(models.Model):
         if duration is None:
             raise ValueError(f"Unknown plan duration: {self.plan.duration}")
         return self.start_date + duration
-    
-    
+
     @staticmethod
     def generate_vless_config(user_uuid, domain="vpn.example.com", port=443, path="/vless", tag="AnonixVPN"):
         return f"vless://{user_uuid}@{domain}:{port}?encryption=none&type=ws&security=tls&path={path}#{tag}"
-
-
 
     def save(self, *args, **kwargs):
         if not self.end_date:
@@ -69,14 +66,12 @@ class Subscription(models.Model):
         if self.end_date and self.end_date < timezone.now():
             self.is_active = False
 
-        # Генерация UUID, если еще не задан
         if not self.vless:
             user_uuid = str(uuid.uuid4())
             self.vless = self.generate_vless_config(
                 user_uuid=user_uuid,
-                ip=settings.SERVER_IP  # Задай IP в settings.py, например: SERVER_IP = "159.198.77.222"
+                domain=settings.SERVER_DOMAIN  # ← используем domain, не ip
             )
-            # Обновить конфиг на сервере:
             apply_vless_on_server(user_uuid)
 
         super().save(*args, **kwargs)
@@ -84,4 +79,3 @@ class Subscription(models.Model):
     class Meta:
         verbose_name_plural = 'Подписки'
         verbose_name = 'Подписку'
-        
