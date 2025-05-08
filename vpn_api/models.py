@@ -6,6 +6,7 @@ from user.models import VPNUser
 import uuid
 from django.conf import settings
 from .utils import apply_vless_on_server
+import urllib.parse
 
 class SubscriptionPlan(models.Model):
     VPN_TYPES = [
@@ -55,9 +56,12 @@ class Subscription(models.Model):
             raise ValueError(f"Unknown plan duration: {self.plan.duration}")
         return self.start_date + duration
 
+
     @staticmethod
     def generate_vless_config(user_uuid, domain="vpn.example.com", port=443, path="/vless", tag="AnonixVPN"):
-        return f"vless://{user_uuid}@{domain}:{port}?encryption=none&type=ws&security=tls&path={path}#{tag}"
+        encoded_path = urllib.parse.quote(path)
+        return f"vless://{user_uuid}@{domain}:{port}?encryption=none&type=ws&security=tls&path={encoded_path}#{tag}"
+
 
     def save(self, *args, **kwargs):
         if not self.end_date:
