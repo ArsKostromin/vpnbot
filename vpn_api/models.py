@@ -61,26 +61,26 @@ class Subscription(models.Model):
         return f"vless://{user_uuid}@{domain}:{port}?encryption=none&type=ws&security=tls&path={path}#{tag}"
 
 
-        def save(self, *args, **kwargs):
-            if not self.end_date:
-                self.end_date = self.calculate_end_date()
+    def save(self, *args, **kwargs):
+        if not self.end_date:
+            self.end_date = self.calculate_end_date()
 
-            if self.end_date and self.end_date < timezone.now():
-                self.is_active = False
+        if self.end_date and self.end_date < timezone.now():
+            self.is_active = False
 
-            # Генерация UUID, если еще не задан
-            if not self.vless:
-                user_uuid = str(uuid.uuid4())
-                self.vless = self.generate_vless_config(
-                    user_uuid=user_uuid,
-                    ip=settings.SERVER_IP  # Задай IP в settings.py, например: SERVER_IP = "159.198.77.222"
-                )
-                # Обновить конфиг на сервере:
-                apply_vless_on_server(user_uuid)
+        # Генерация UUID, если еще не задан
+        if not self.vless:
+            user_uuid = str(uuid.uuid4())
+            self.vless = self.generate_vless_config(
+                user_uuid=user_uuid,
+                ip=settings.SERVER_IP  # Задай IP в settings.py, например: SERVER_IP = "159.198.77.222"
+            )
+            # Обновить конфиг на сервере:
+            apply_vless_on_server(user_uuid)
 
-            super().save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
-        class Meta:
-            verbose_name_plural = 'Подписки'
-            verbose_name = 'Подписку'
-            
+    class Meta:
+        verbose_name_plural = 'Подписки'
+        verbose_name = 'Подписку'
+        
