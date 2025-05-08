@@ -9,5 +9,5 @@ urlpatterns = [
     path('payment-fail/', views.fail_payment, name='payment-fail'),
     path('api/crypto/webhook/', views.crypto_webhook, name='crypto_webhook'),
     path('api/crypto/create/', views.CreateCryptoPaymentAPIView.as_view(), name='create_crypto_payment'),
-    path("payments/stars/", views.StarPaymentAPIView.as_view(), name="star-payment"),
+    path("stars/", views.StarPaymentAPIView.as_view(), name="star-payment"),
 ]
