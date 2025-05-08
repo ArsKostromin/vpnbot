@@ -18,6 +18,9 @@ from payments.services import (
     generate_robokassa_payment_link,
     verify_robokassa_signature
 )
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @api_view(["POST"])
@@ -133,32 +136,42 @@ def crypto_webhook(request):
     Обработка webhook-а от CryptoBot об успешной оплате.
     """
     event = request.data
+    logger.info(f"[Webhook] Получено событие: {event}")
 
     if event.get("type") != "invoice_paid":
+        logger.warning("[Webhook] Не является событием оплаты")
         return Response({"message": "Not a payment event"}, status=status.HTTP_200_OK)
 
     payload = event.get("payload")
     if not payload:
+        logger.error("[Webhook] Payload отсутствует")
         return Response({"error": "Missing payload"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         inv_id = int(payload)
     except ValueError:
+        logger.error(f"[Webhook] Некорректный формат payload: {payload}")
         return Response({"error": "Invalid payload format"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         payment = Payment.objects.get(inv_id=inv_id)
     except Payment.DoesNotExist:
+        logger.error(f"[Webhook] Платёж с inv_id={inv_id} не найден")
         return Response({"error": "Payment not found"}, status=status.HTTP_404_NOT_FOUND)
 
     if payment.status == Payment.Status.SUCCESS:
+        logger.info(f"[Webhook] Платёж уже обработан: inv_id={inv_id}")
         return Response({"message": "Already processed"}, status=status.HTTP_200_OK)
 
-    apply_payment(payment.user, payment.amount)  # тут используем payment.amount
-    payment.status = Payment.Status.SUCCESS
-    payment.save()
-
-    return Response({"message": "Payment processed"}, status=status.HTTP_200_OK)
+    try:
+        apply_payment(payment.user, payment.amount)
+        payment.status = Payment.Status.SUCCESS
+        payment.save()
+        logger.info(f"[Webhook] Платёж успешно обработан: inv_id={inv_id}")
+        return Response({"message": "Payment processed"}, status=status.HTTP_200_OK)
+    except Exception as e:
+        logger.exception(f"[Webhook] Ошибка при применении платежа inv_id={inv_id}: {e}")
+        return Response({"error": "Internal error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 
