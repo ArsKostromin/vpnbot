@@ -5,7 +5,6 @@ from dateutil.relativedelta import relativedelta
 from user.models import VPNUser
 import uuid
 from django.conf import settings
-from .utils import apply_vless_on_server
 import urllib.parse
 
 class SubscriptionPlan(models.Model):
@@ -57,10 +56,10 @@ class Subscription(models.Model):
         return self.start_date + duration
 
 
-    @staticmethod
-    def generate_vless_config(user_uuid, domain="server2.anonixvpn.space", port=443, path="/vless", tag="AnonixVPN"):
-        encoded_path = urllib.parse.quote(path)
-        return f"vless://{user_uuid}@{domain}:{port}?encryption=none&type=ws&security=tls&path={encoded_path}#{tag}"
+    # @staticmethod
+    # def generate_vless_config(user_uuid, domain="server2.anonixvpn.space", port=443, path="/vless", tag="AnonixVPN"):
+    #     encoded_path = urllib.parse.quote(path)
+    #     return f"vless://{user_uuid}@{domain}:{port}?encryption=none&type=ws&security=tls&path={encoded_path}#{tag}"
 
 
     def save(self, *args, **kwargs):
@@ -70,13 +69,13 @@ class Subscription(models.Model):
         if self.end_date and self.end_date < timezone.now():
             self.is_active = False
 
-        if not self.vless:
-            user_uuid = str(uuid.uuid4())
-            self.vless = self.generate_vless_config(
-                user_uuid=user_uuid,
-                domain=settings.SERVER_DOMAIN  # ← используем domain, не ip
-            )
-            apply_vless_on_server(user_uuid)
+        # if not self.vless:
+        #     user_uuid = str(uuid.uuid4())
+        #     self.vless = self.generate_vless_config(
+        #         user_uuid=user_uuid,
+        #         domain=settings.SERVER_DOMAIN  # ← используем domain, не ip
+        #     )
+        #     apply_vless_on_server(user_uuid)
 
         super().save(*args, **kwargs)
 

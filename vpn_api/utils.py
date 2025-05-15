@@ -1,34 +1,34 @@
-import json
-import os
-import subprocess
+import requests
 
-CONFIG_PATH = "/usr/local/etc/xray/config.json"
+FASTAPI_VLESS_ENDPOINT = "http://159.198.77.150:8000/api/v1/vless"
 
-def apply_vless_on_server(user_uuid):
-    # Загружаем текущий конфиг
-    with open(CONFIG_PATH, "r") as f:
-        config = json.load(f)
-
-    # Проверка, есть ли UUID уже в списке
-    existing_ids = [client.get("id") for client in config["inbounds"][0]["settings"]["clients"]]
-    if user_uuid in existing_ids:
-        print(f"UUID {user_uuid} уже добавлен.")
-        return
-
-    # Добавляем нового клиента
-    config["inbounds"][0]["settings"]["clients"].append({
-        "id": user_uuid,
-        "level": 0
-    })
-
-    # Сохраняем конфиг
-    with open(CONFIG_PATH, "w") as f:
-        json.dump(config, f, indent=2)
-
-    # Перезапускаем Xray с контролем ошибок
+def create_vless(uuid: str) -> str | None:
+    """
+    Создаёт VLESS пользователя через FastAPI. Возвращает ссылку, если успех.
+    """
     try:
-        subprocess.run(["docker", "restart", "xray-container"], check=True)
+        response = requests.post(FASTAPI_VLESS_ENDPOINT, json={"uuid": uuid}, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        if data.get("success"):
+            return data.get("vless_link")
+        else:
+            print(f"[create_vless] Ошибка: {data.get('message')}")
+            return None
+    except requests.RequestException as e:
+        print(f"[create_vless] Запрос провалился: {e}")
+        return None
 
-        print("Xray успешно перезапущен.")
-    except subprocess.CalledProcessError as e:
-        print("Ошибка при перезапуске Xray:", e)
+
+def delete_vless(uuid: str) -> bool:
+    """
+    Удаляет VLESS пользователя через FastAPI. Возвращает True, если успех.
+    """
+    try:
+        response = requests.delete(FASTAPI_VLESS_ENDPOINT, json={"uuid": uuid}, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        return data.get("success", False)
+    except requests.RequestException as e:
+        print(f"[delete_vless] Запрос провалился: {e}")
+        return False
