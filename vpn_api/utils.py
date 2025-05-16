@@ -2,22 +2,26 @@ import requests
 
 FASTAPI_VLESS_ENDPOINT = "http://159.198.77.150:8000/api/v1/vless"
 
-def create_vless(uuid: str) -> str | None:
+def create_vless(uuid: str) -> dict:
     """
-    Создаёт VLESS пользователя через FastAPI. Возвращает ссылку, если успех.
+    Создаёт VLESS пользователя через FastAPI. Возвращает dict с ключами 'success', 'vless_link', 'message'.
     """
     try:
-        response = requests.post(FASTAPI_VLESS_ENDPOINT, json={"uuid": str(uuid)}, timeout=10)
+        response = requests.post(
+            FASTAPI_VLESS_ENDPOINT,
+            json={"uuid": str(uuid)},
+            timeout=10
+        )
         response.raise_for_status()
         data = response.json()
         if data.get("success"):
-            return data.get("vless_link")
+            return {"success": True, "vless_link": data.get("vless_link")}
         else:
-            print(f"[create_vless] Ошибка: {data.get('message')}")
-            return None
+            print(f"[create_vless] Ошибка от FastAPI: {data.get('message')}")
+            return {"success": False, "message": data.get("message")}
     except requests.RequestException as e:
-        print(f"[create_vless] Запрос провалился: {e}")
-        return None
+        print(f"[create_vless] Сетевая ошибка: {e}")
+        return {"success": False, "message": str(e)}
 
 
 def delete_vless(uuid: str) -> bool:
