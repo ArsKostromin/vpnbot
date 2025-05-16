@@ -4,6 +4,7 @@ from django.utils import timezone
 from rest_framework import status
 from vpn_api.models import SubscriptionPlan, Subscription
 from .models import Coupon
+from vpn_api.utils import create_vless
 
 
 def apply_coupon_to_user(user, code):
@@ -30,6 +31,8 @@ def apply_coupon_to_user(user, code):
         return {"data": {"detail": f"Баланс пополнен на {coupon.discount_amount}₽."}, "status": status.HTTP_200_OK}
 
     elif coupon.type == "subscription":
+
+        
         plan = SubscriptionPlan.objects.filter(
             vpn_type=coupon.vpn_type, duration=coupon.duration
         ).first()
@@ -40,8 +43,22 @@ def apply_coupon_to_user(user, code):
                 "status": status.HTTP_400_BAD_REQUEST,
             }
 
+        try:
+            vless_result = create_vless(user.uuid)
+        except Exception as e:
+            return {
+                "data": {"detail": f"Ошибка при создании VLESS: {str(e)}"},
+                "status": status.HTTP_500_INTERNAL_SERVER_ERROR,
+            }
+
+        if not vless_result.get("success"):
+            return {
+                "data": {"detail": "VLESS не был создан. Попробуйте позже."},
+                "status": status.HTTP_500_INTERNAL_SERVER_ERROR,
+            }
+
         # Создаём подписку
-        Subscription.objects.create(user=user, plan=plan)
+        Subscription.objects.create(user=user, plan=plan, vless=vless_result["vless_link"])
 
         coupon.is_used = True
         coupon.used_by = user
