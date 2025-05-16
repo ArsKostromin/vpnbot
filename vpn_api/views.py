@@ -78,8 +78,6 @@ class BuySubscriptionView(APIView):
         }, status=status.HTTP_201_CREATED)
 
 
-
-
 class SubscriptionPlanListView(APIView):
     permission_classes = [AllowAny]
 

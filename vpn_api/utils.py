@@ -7,7 +7,7 @@ def create_vless(uuid: str) -> str | None:
     Создаёт VLESS пользователя через FastAPI. Возвращает ссылку, если успех.
     """
     try:
-        response = requests.post(FASTAPI_VLESS_ENDPOINT, json={"uuid": uuid}, timeout=10)
+        response = requests.post(FASTAPI_VLESS_ENDPOINT, json={"uuid": str(uuid)}, timeout=10)
         response.raise_for_status()
         data = response.json()
         if data.get("success"):
