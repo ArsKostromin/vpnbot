@@ -5,7 +5,7 @@ from .models import VPNUser
 @admin.register(VPNUser)
 class VPNUserAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'email', 'telegram_id', 'balance', 'is_banned', 'is_active',
+        'id', 'email', 'telegram_id', 'balance', 'is_banned', 'is_active', 'uuid',
         'current_ip', 'created_at', 'referrals_list', 'subscriptions_list'  # ← добавлено
     )
     list_filter = ('is_banned', 'is_active', 'created_at')
