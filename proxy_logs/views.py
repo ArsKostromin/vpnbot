@@ -12,13 +12,11 @@ class ProxyLogReceiver(APIView):
 
         raw_log = data.get("raw_log")
         remote_ip = data.get("ip")
-        hostname = data.get("host")
         destination = data.get("destination")
         timestamp = parse_datetime(data.get("timestamp"))
-
         uuid = data.get("uuid")
 
-        # Если UUID не пришёл — попробуем вытянуть его из raw_log
+        # Если UUID не пришёл — попробуем вытянуть из raw_log
         if not uuid and raw_log:
             uuid_match = re.search(r'[a-f0-9\-]{36}', raw_log)
             if uuid_match:
@@ -38,7 +36,7 @@ class ProxyLogReceiver(APIView):
             parts = raw_log.split()
             if len(parts) >= 5:
                 try:
-                    status_code = parts[3]
+                    status_code = parts[3].split("/")[1] if "/" in parts[3] else None
                     bytes_sent = int(parts[4])
                 except Exception:
                     pass
@@ -51,7 +49,6 @@ class ProxyLogReceiver(APIView):
             domain=destination,
             status=status_code,
             bytes_sent=bytes_sent,
-            hostname=hostname,
         )
 
         return Response({"ok": True}, status=status.HTTP_201_CREATED)
