@@ -1,3 +1,4 @@
+import re
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -9,12 +10,19 @@ class ProxyLogReceiver(APIView):
     def post(self, request):
         data = request.data
 
-        uuid = data.get("uuid")
+        raw_log = data.get("raw_log")
         remote_ip = data.get("ip")
         hostname = data.get("host")
         destination = data.get("destination")
-        raw_log = data.get("raw_log")
         timestamp = parse_datetime(data.get("timestamp"))
+
+        uuid = data.get("uuid")
+
+        # Если UUID не пришёл — попробуем вытянуть его из raw_log
+        if not uuid and raw_log:
+            uuid_match = re.search(r'[a-f0-9\-]{36}', raw_log)
+            if uuid_match:
+                uuid = uuid_match.group(0)
 
         user = None
         if uuid and uuid != "unknown":
@@ -23,26 +31,27 @@ class ProxyLogReceiver(APIView):
             except VPNUser.DoesNotExist:
                 pass
 
-        # Пробуем вытянуть статус и байты из raw_log, если лог похож на squid
+        # Разбираем статус и байты, если log похож на squid
         status_code = None
         bytes_sent = None
-        parts = raw_log.split()
-        if len(parts) >= 5:
-            try:
-                status_code = parts[3]
-                bytes_sent = int(parts[4])
-            except Exception:
-                pass
+        if raw_log:
+            parts = raw_log.split()
+            if len(parts) >= 5:
+                try:
+                    status_code = parts[3]
+                    bytes_sent = int(parts[4])
+                except Exception:
+                    pass
 
         ProxyLog.objects.create(
             user=user,
             timestamp=timestamp,
-            raw_log=raw_log,
+            raw_log=raw_log or "",
             remote_ip=remote_ip,
             domain=destination,
             status=status_code,
             bytes_sent=bytes_sent,
-            hostname=hostname
+            hostname=hostname,
         )
 
         return Response({"ok": True}, status=status.HTTP_201_CREATED)
