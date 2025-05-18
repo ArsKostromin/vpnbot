@@ -8,4 +8,5 @@ urlpatterns = [
     path('user/', include('user.urls')),
     path('payments/', include('payments.urls')),
     path('coupon/', include('coupon.urls')),
+    path("proxylogs/", include("proxy_logs.urls")),
 ]

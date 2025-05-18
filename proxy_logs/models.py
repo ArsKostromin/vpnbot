@@ -1,8 +1,9 @@
 # vpn_api/models.py
-
+from user.models import VPNUser
 from django.db import models
 
 class ProxyLog(models.Model):
+    user = models.ForeignKey(VPNUser, on_delete=models.CASCADE, null=True, blank=True, related_name='proxy_logs', verbose_name='Пользователь')
     timestamp = models.DateTimeField(auto_now_add=True, verbose_name="Дата и время записи")
     raw_log = models.TextField(verbose_name="Исходный лог")
     remote_ip = models.GenericIPAddressField(null=True, blank=True, verbose_name="IP-адрес клиента")
