@@ -4,33 +4,31 @@ from rest_framework import status
 from .models import ProxyLog
 from user.models import VPNUser
 from django.utils.dateparse import parse_datetime
-import re
 
 class ProxyLogReceiver(APIView):
     def post(self, request):
         data = request.data
-        raw_log = data.get("log")
+
+        uuid = data.get("uuid")
         remote_ip = data.get("ip")
+        hostname = data.get("host")
+        destination = data.get("destination")
+        raw_log = data.get("raw_log")
         timestamp = parse_datetime(data.get("timestamp"))
 
-        # Попытка извлечь UUID из email-подобной строки
-        uuid_match = re.search(r'[a-f0-9\-]{36}', raw_log)
         user = None
-        domain = None
-        status_code = None
-        bytes_sent = None
-
-        if uuid_match:
+        if uuid and uuid != "unknown":
             try:
-                user = VPNUser.objects.get(uuid=uuid_match.group(0))
+                user = VPNUser.objects.get(uuid=uuid)
             except VPNUser.DoesNotExist:
                 pass
 
-        # Попытка вытащить домен из лога, если лог выглядит как squid лог
+        # Пробуем вытянуть статус и байты из raw_log, если лог похож на squid
+        status_code = None
+        bytes_sent = None
         parts = raw_log.split()
-        if len(parts) >= 7:
+        if len(parts) >= 5:
             try:
-                domain = parts[6]
                 status_code = parts[3]
                 bytes_sent = int(parts[4])
             except Exception:
@@ -41,9 +39,10 @@ class ProxyLogReceiver(APIView):
             timestamp=timestamp,
             raw_log=raw_log,
             remote_ip=remote_ip,
-            domain=domain,
+            domain=destination,
             status=status_code,
-            bytes_sent=bytes_sent
+            bytes_sent=bytes_sent,
+            hostname=hostname
         )
 
         return Response({"ok": True}, status=status.HTTP_201_CREATED)
