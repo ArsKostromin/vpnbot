@@ -5,6 +5,7 @@ from rest_framework import status
 from .models import ProxyLog
 from user.models import VPNUser
 from django.utils.dateparse import parse_datetime
+from uuid import UUID
 
 class ProxyLogReceiver(APIView):
     def post(self, request):
@@ -14,22 +15,24 @@ class ProxyLogReceiver(APIView):
         remote_ip = data.get("ip")
         destination = data.get("destination")
         timestamp = parse_datetime(data.get("timestamp"))
-        uuid = data.get("uuid")
+        uuid_str = data.get("uuid")
 
-        # Если UUID не пришёл — попробуем вытянуть из raw_log
-        if not uuid and raw_log:
-            uuid_match = re.search(r'[a-f0-9\-]{36}', raw_log)
+        # Если UUID не пришёл — пробуем вытащить из raw_log
+        if not uuid_str and raw_log:
+            uuid_match = re.search(r'[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}', raw_log)
             if uuid_match:
-                uuid = uuid_match.group(0)
+                uuid_str = uuid_match.group(0)
 
         user = None
-        if uuid and uuid != "unknown":
+        if uuid_str and uuid_str != "unknown":
             try:
-                user = VPNUser.objects.get(uuid=uuid)
-            except VPNUser.DoesNotExist:
+                # Конвертируем в настоящий UUID (важно!)
+                uuid_obj = UUID(uuid_str)
+                user = VPNUser.objects.get(uuid=uuid_obj)
+            except (ValueError, VPNUser.DoesNotExist):
                 pass
 
-        # Разбираем статус и байты, если log похож на squid
+        # Парсим статус и байты, если лог похож на Squid
         status_code = None
         bytes_sent = None
         if raw_log:
