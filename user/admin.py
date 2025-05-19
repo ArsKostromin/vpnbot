@@ -3,6 +3,16 @@ from django.utils.html import format_html, format_html_join
 from .models import VPNUser
 from proxy_logs.models import ProxyLog
 
+
+class ProxyLogInline(admin.TabularInline):
+    model = ProxyLog
+    extra = 0
+    fields = ("timestamp", "domain", "status", "bytes_sent", "remote_ip")
+    readonly_fields = ("timestamp", "domain", "status", "bytes_sent", "remote_ip")
+    can_delete = False
+    show_change_link = True
+
+
 @admin.register(VPNUser)
 class VPNUserAdmin(admin.ModelAdmin):
     list_display = (
@@ -47,11 +57,3 @@ class VPNUserAdmin(admin.ModelAdmin):
             )
         )
     subscriptions_list.short_description = "Подписки"
-
-class ProxyLogInline(admin.TabularInline):
-    model = ProxyLog
-    extra = 0
-    fields = ("timestamp", "domain", "status", "bytes_sent", "remote_ip")
-    readonly_fields = ("timestamp", "domain", "status", "bytes_sent", "remote_ip")
-    can_delete = False
-    show_change_link = True
