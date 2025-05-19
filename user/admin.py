@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html, format_html_join
 from .models import VPNUser
+from proxy_logs.models import ProxyLog
 
 @admin.register(VPNUser)
 class VPNUserAdmin(admin.ModelAdmin):
