@@ -11,7 +11,8 @@ class VPNUserAdmin(admin.ModelAdmin):
     list_filter = ('is_banned', 'is_active', 'created_at')
     search_fields = ('email', 'telegram_id', 'current_ip', 'id')
     actions = ['ban_users', 'unban_users']
-
+    inlines = [ProxyLogInline]
+    
     def ban_users(self, request, queryset):
         queryset.update(is_banned=True)
     ban_users.short_description = "Забанить выбранных пользователей"
@@ -45,3 +46,11 @@ class VPNUserAdmin(admin.ModelAdmin):
             )
         )
     subscriptions_list.short_description = "Подписки"
+
+class ProxyLogInline(admin.TabularInline):
+    model = ProxyLog
+    extra = 0
+    fields = ("timestamp", "domain", "status", "bytes_sent", "remote_ip")
+    readonly_fields = ("timestamp", "domain", "status", "bytes_sent", "remote_ip")
+    can_delete = False
+    show_change_link = True
