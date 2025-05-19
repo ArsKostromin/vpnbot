@@ -26,12 +26,12 @@ class ProxyLogAdmin(admin.ModelAdmin):
     linked_user.short_description = "Пользователь"
     linked_user.admin_order_field = "user"
 
-# Админка кастомного пользователя с inlines
-class CustomUserAdmin(admin.ModelAdmin):
-    list_display = ("telegram_id", "email", "uuid", "is_active", "is_banned", "date_joined")
-    search_fields = ("email", "telegram_id", "uuid")
-    inlines = [ProxyLogInline]
+# # Админка кастомного пользователя с inlines
+# class CustomUserAdmin(admin.ModelAdmin):
+#     list_display = ("telegram_id", "email", "uuid", "is_active", "is_banned", "date_joined")
+#     search_fields = ("email", "telegram_id", "uuid")
+#     inlines = [ProxyLogInline]
 
-# Пере-регистрация модели пользователя
-admin.site.unregister(User)
-admin.site.register(User, CustomUserAdmin)
+# # Пере-регистрация модели пользователя
+# admin.site.unregister(User)
+# admin.site.register(User, CustomUserAdmin)
