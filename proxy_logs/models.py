@@ -13,3 +13,7 @@ class ProxyLog(models.Model):
 
     def __str__(self):
         return f"{self.timestamp} - {self.domain or 'нет домена'}"
+
+    class Meta:
+        verbose_name = 'лог'
+        verbose_name_plural = 'логи'
