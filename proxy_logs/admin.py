@@ -4,20 +4,12 @@ from django.utils.html import format_html
 from django.urls import reverse
 from .models import ProxyLog
 
-User = get_user_model()
-
-class ProxyLogInline(admin.TabularInline):
-    model = ProxyLog
-    extra = 0
-    fields = ("timestamp", "remote_ip", "domain")
-    readonly_fields = ("timestamp", "remote_ip", "domain")
-    show_change_link = True
 
 @admin.register(ProxyLog)
 class ProxyLogAdmin(admin.ModelAdmin):
     list_display = ("remote_ip", "linked_user", "timestamp", "domain")
     search_fields = ("raw_log", "domain", "remote_ip", "user__email", "user__telegram_id")
-    inlines = [ProxyLogInline]
+    readonly_fields = ("user_logs",)
 
     def linked_user(self, obj):
         if obj.user:
@@ -27,12 +19,14 @@ class ProxyLogAdmin(admin.ModelAdmin):
     linked_user.short_description = "Пользователь"
     linked_user.admin_order_field = "user"
 
-# # Админка кастомного пользователя с inlines
-# class CustomUserAdmin(admin.ModelAdmin):
-#     list_display = ("telegram_id", "email", "uuid", "is_active", "is_banned", "date_joined")
-#     search_fields = ("email", "telegram_id", "uuid")
-#     inlines = [ProxyLogInline]
+    def user_logs(self, obj):
+        if not obj.user:
+            return "—"
+        logs = ProxyLog.objects.filter(user=obj.user).order_by("-timestamp")[:20]
+        html = "<ul>"
+        for log in logs:
+            html += f"<li>{log.timestamp} — {log.remote_ip} — {log.domain}</li>"
+        html += "</ul>"
+        return mark_safe(html)
 
-# # Пере-регистрация модели пользователя
-# admin.site.unregister(User)
-# admin.site.register(User, CustomUserAdmin)
+    user_logs.short_description = "Логи этого пользователя"
