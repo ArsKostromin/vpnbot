@@ -10,71 +10,84 @@ from django.utils import timezone
 from datetime import timedelta
 from .utils import create_vless, delete_vless  # пусть функция будет там
 from django.shortcuts import render
+import uuid
+from .services import extend_subscription, get_duration_delta
+
 
 class BuySubscriptionView(APIView):
-    permission_classes = [AllowAny]  # Разрешаем доступ всем (можно ограничить, если нужно)
+    permission_classes = [AllowAny]
 
     def post(self, request):
-        # Получаем telegram_id из тела запроса
         telegram_id = request.data.get("telegram_id")
         if not telegram_id:
             return Response({"error": "telegram_id обязателен"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Пытаемся найти пользователя по telegram_id
         try:
             user = VPNUser.objects.get(telegram_id=telegram_id)
         except VPNUser.DoesNotExist:
             return Response({"error": "Пользователь не найден"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Валидируем переданные данные сериализатором
         serializer = BuySubscriptionSerializer(data=request.data, context={'user': user})
         serializer.is_valid(raise_exception=True)
 
-        plan = serializer.validated_data['plan']  # Получаем выбранный тарифный план
+        plan = serializer.validated_data['plan']
 
-        # Проверяем, есть ли у пользователя активные подписки, срок которых ещё не истёк
-        active_subscriptions = user.subscriptions.filter(is_active=True, end_date__gt=timezone.now())
-
-        if active_subscriptions.exists():
-            # Если уже есть подписка с таким же типом VPN, продолжаем её с момента окончания
-            same_type_sub = active_subscriptions.filter(plan__vpn_type=plan.vpn_type).first()
-            if same_type_sub:
-                start_date = same_type_sub.end_date
-            else:
-                # Иначе деактивируем все старые и начинаем новую с текущего момента
-                active_subscriptions.update(is_active=False)
-                start_date = timezone.now()
-        else:
-            start_date = timezone.now()
-
-        # Проверка на наличие достаточного баланса
         if user.balance < plan.price:
             return Response({"error": "Недостаточно средств"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Списываем средства с баланса
-        user.balance -= plan.price
-        user.save()
+        active_subscriptions = user.subscriptions.filter(is_active=True, end_date__gt=timezone.now())
+        same_type_sub = active_subscriptions.filter(plan__vpn_type=plan.vpn_type).first()
 
+        if same_type_sub:
+            try:
+                extend_subscription(same_type_sub, plan)
+            except ValueError as e:
+                return Response({"error": str(e)}, status=500)
 
-        vless_result = create_vless(user.uuid)
+            user.balance -= plan.price
+            user.save()
+
+            return Response({
+                "message": "Подписка успешно продлена",
+                "subscription_id": same_type_sub.id,
+                "start_date": same_type_sub.start_date,
+                "end_date": same_type_sub.end_date,
+                "vless": same_type_sub.vless,
+                "uuid": same_type_sub.uuid
+            }, status=status.HTTP_200_OK)
+
+        # Новая подписка
+        user_uuid = uuid.uuid4()
+        vless_result = create_vless(user_uuid)
         if not vless_result["success"]:
             return Response({"error": "Ошибка создания VLESS"}, status=500)
 
-        # Создаём новую подписку
+        delta = get_duration_delta(plan.duration)
+        if not delta:
+            return Response({"error": "Неизвестная длительность плана"}, status=500)
+
+        start_date = timezone.now()
+        end_date = start_date + delta
+
         subscription = Subscription.objects.create(
             user=user,
             plan=plan,
             start_date=start_date,
+            end_date=end_date,
             vless=vless_result["vless_link"],
+            uuid=user_uuid
         )
 
-        # Возвращаем инфу об успешно оформленной подписке
+        user.balance -= plan.price
+        user.save()
+
         return Response({
-            "message": f"Подписка успешно оформлена",
+            "message": "Подписка успешно оформлена",
             "subscription_id": subscription.id,
             "start_date": subscription.start_date,
             "end_date": subscription.end_date,
-            "vless": subscription.vless  # На этом этапе может быть пусто, если выше не вызывался FastAPI
+            "vless": subscription.vless,
+            "uuid": subscription.uuid
         }, status=status.HTTP_201_CREATED)
 
 

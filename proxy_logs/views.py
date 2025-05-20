@@ -28,7 +28,8 @@ class ProxyLogReceiver(APIView):
             try:
                 # Конвертируем в настоящий UUID (важно!)
                 uuid_obj = UUID(uuid_str)
-                user = VPNUser.objects.get(uuid=uuid_obj)
+                subscription = Subscription.objects.get(uuid=email_from_log)
+                user = subscription.user
             except (ValueError, VPNUser.DoesNotExist):
                 pass
 

@@ -1,4 +1,5 @@
 import requests
+from dateutil.relativedelta import relativedelta
 
 FASTAPI_VLESS_ENDPOINT = "http://159.198.77.150:8000/api/v1/vless"
 
@@ -36,3 +37,13 @@ def delete_vless(uuid: str) -> bool:
     except requests.RequestException as e:
         print(f"[delete_vless] Запрос провалился: {e}")
         return False
+
+
+def get_duration_delta(duration_code: str):
+    duration_map = {
+        '1m': relativedelta(months=1),
+        '6m': relativedelta(months=6),
+        '1y': relativedelta(years=1),
+        '3y': relativedelta(years=3),
+    }
+    return duration_map.get(duration_code)
