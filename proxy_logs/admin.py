@@ -1,9 +1,8 @@
 from django.contrib import admin
-from django.contrib.auth import get_user_model
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 from django.urls import reverse
 from .models import ProxyLog
-from django.utils.safestring import mark_safe
 
 
 @admin.register(ProxyLog)
@@ -23,11 +22,38 @@ class ProxyLogAdmin(admin.ModelAdmin):
     def user_logs(self, obj):
         if not obj.user:
             return "—"
-        logs = ProxyLog.objects.filter(user=obj.user).order_by("-timestamp")[:20]
-        html = "<ul>"
+        logs = ProxyLog.objects.filter(user=obj.user).exclude(pk=obj.pk).order_by("-timestamp")[:20]
+        if not logs:
+            return "—"
+        html = """
+        <style>
+            table.user-logs-table th, table.user-logs-table td {
+                padding: 4px 8px;
+                border: 1px solid #ccc;
+            }
+        </style>
+        <table class="user-logs-table">
+            <thead>
+                <tr>
+                    <th>Время</th>
+                    <th>IP</th>
+                    <th>Домен</th>
+                    <th>Открыть</th>
+                </tr>
+            </thead>
+            <tbody>
+        """
         for log in logs:
-            html += f"<li>{log.timestamp} — {log.remote_ip} — {log.domain}</li>"
-        html += "</ul>"
+            log_url = reverse("admin:proxy_logs_proxylog_change", args=[log.pk])
+            html += f"""
+                <tr>
+                    <td>{log.timestamp.strftime('%Y-%m-%d %H:%M:%S')}</td>
+                    <td>{log.remote_ip}</td>
+                    <td>{log.domain}</td>
+                    <td><a href="{log_url}">Открыть</a></td>
+                </tr>
+            """
+        html += "</tbody></table>"
         return mark_safe(html)
 
-    user_logs.short_description = "Логи этого пользователя"
+    user_logs.short_description = "Другие логи этого пользователя"
