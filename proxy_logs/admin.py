@@ -15,7 +15,7 @@ class ProxyLogInline(admin.TabularInline):
 
 @admin.register(ProxyLog)
 class ProxyLogAdmin(admin.ModelAdmin):
-    list_display = ("timestamp", "linked_user", "remote_ip", "domain")
+    list_display = ("remote_ip", "linked_user", "timestamp", "domain")
     search_fields = ("raw_log", "domain", "remote_ip", "user__email", "user__telegram_id")
 
     def linked_user(self, obj):
