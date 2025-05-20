@@ -7,8 +7,9 @@ from .models import ProxyLog
 
 @admin.register(ProxyLog)
 class ProxyLogAdmin(admin.ModelAdmin):
-    list_display = ("remote_ip", "linked_user", "timestamp", "domain")
+    list_display = ("remote_ip", "linked_user", "timestamp")
     search_fields = ("raw_log", "domain", "remote_ip", "user__email", "user__telegram_id")
+    fields = ("remote_ip", "linked_user", "timestamp", "domain", "user_logs") 
     readonly_fields = ("user_logs",)
 
     def linked_user(self, obj):
