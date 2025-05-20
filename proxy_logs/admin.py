@@ -9,8 +9,8 @@ from .models import ProxyLog
 class ProxyLogAdmin(admin.ModelAdmin):
     list_display = ("remote_ip", "linked_user", "timestamp")
     search_fields = ("raw_log", "domain", "remote_ip", "user__email", "user__telegram_id")
-    fields = ("remote_ip", "linked_user", "timestamp", "domain") 
-    readonly_fields = ("user_logs",)
+    fields = ("remote_ip", "linked_user", "domain", "timestamp", "user_logs")
+    readonly_fields = ("user_logs", "timestamp", "linked_user")
 
     def linked_user(self, obj):
         if obj.user:
