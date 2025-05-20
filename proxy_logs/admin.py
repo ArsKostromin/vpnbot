@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.utils.html import format_html
 from django.urls import reverse
 from .models import ProxyLog
+from django.utils.safestring import mark_safe
 
 
 @admin.register(ProxyLog)
