@@ -17,7 +17,7 @@ class ProxyLogInline(admin.TabularInline):
 class VPNUserAdmin(admin.ModelAdmin):
     list_display = (
         'id', 'telegram_id', 'balance', 'is_banned',
-        'current_ip', 'created_at', 'referrals_list', 'subscriptions_list'  # ← добавлено
+        'created_at', 'referrals_list', 'subscriptions_list'  # ← добавлено
     )
     list_filter = ('is_banned', 'is_active', 'created_at')
     search_fields = ('email', 'telegram_id', 'current_ip', 'id')
