@@ -7,8 +7,8 @@ from proxy_logs.models import ProxyLog
 class ProxyLogInline(admin.TabularInline):
     model = ProxyLog
     extra = 0
-    fields = ("timestamp", "domain", "status", "bytes_sent", "remote_ip")
-    readonly_fields = ("timestamp", "domain", "status", "bytes_sent", "remote_ip")
+    fields = ("timestamp", "domain", "remote_ip")
+    readonly_fields = ("timestamp", "domain", "remote_ip")
     can_delete = False
     show_change_link = True
 
