@@ -3,9 +3,25 @@ from rest_framework import serializers
 from .models import Subscription, SubscriptionPlan
 
 class SubscriptionPlanSerializer(serializers.ModelSerializer):
+    vpn_type_display = serializers.SerializerMethodField()
+    duration_display = serializers.SerializerMethodField()
+
     class Meta:
         model = SubscriptionPlan
-        fields = '__all__'
+        fields = [
+            'id',
+            'vpn_type',
+            'vpn_type_display',
+            'duration',
+            'duration_display',
+            'price'
+        ]
+
+    def get_vpn_type_display(self, obj):
+        return obj.get_vpn_type_display()
+
+    def get_duration_display(self, obj):
+        return obj.get_duration_display()
 
 class BuySubscriptionSerializer(serializers.Serializer):
     plan_id = serializers.IntegerField()
