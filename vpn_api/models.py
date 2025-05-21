@@ -9,10 +9,11 @@ import urllib.parse
 
 class SubscriptionPlan(models.Model):
     VPN_TYPES = [
-        ('socials', '🌭 Для YouTube и соцсетей'),
-        ('torrents', 'Для торрентов'),
+        ('socials', 'для соц.сетей'),
+        ('torrents', 'Для загрузки файлов'),
         ('secure', '🛡 Двойное шифрование'),
         ('country', '🌐 Выбор по стране'),
+        ("serfing", 'Для серфинга')
     ]
 
     DURATION_CHOICES = [
