@@ -11,7 +11,7 @@ class ProxyLogInline(admin.TabularInline):
     readonly_fields = ("timestamp", "domain", "remote_ip")
     can_delete = False
     show_change_link = True
-
+    ordering = ('-timestamp',)
 
 @admin.register(VPNUser)
 class VPNUserAdmin(admin.ModelAdmin):
