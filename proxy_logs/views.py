@@ -6,6 +6,7 @@ from .models import ProxyLog
 from user.models import VPNUser
 from django.utils.dateparse import parse_datetime
 from uuid import UUID
+from vpn_api.models import Subscription
 
 class ProxyLogReceiver(APIView):
     def post(self, request):
