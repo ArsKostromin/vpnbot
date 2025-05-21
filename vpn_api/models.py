@@ -42,7 +42,7 @@ class Subscription(models.Model):
     auto_renew = models.BooleanField(default=True, verbose_name='Автопродление')
     paused = models.BooleanField(default=False, verbose_name='Пауза')
     vless = models.TextField(blank=True, null=True, verbose_name='VLESS конфиг')
-    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, verbose_name="UUID", blank=True, null=True,)
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, verbose_name="UUID", blank=True, null=True,)
 
     def calculate_end_date(self):
         duration_map = {
