@@ -32,7 +32,7 @@ def get_usd_to_rub_rate() -> Decimal:
 def generate_robokassa_payment_link(payment: Payment) -> str:
     """
     Формирование ссылки для оплаты через Robokassa с пересчётом в рубли.
-    Сумма всегда зачисляется на баланс в долларах.
+    Сумма всегда зачисляется на баланс в долларах (payment.amount).
     """
     login = settings.ROBOKASSA_LOGIN
     password1 = settings.ROBOKASSA_PASSWORD1
@@ -40,20 +40,16 @@ def generate_robokassa_payment_link(payment: Payment) -> str:
 
     rate = get_usd_to_rub_rate()
 
-    # Конвертируем любую валюту в доллары
-    if payment.currency.lower() in ('usd', 'dollar', 'доллар'):
-        amount_usd = payment.amount
-    else:
-        # Допустим, если валюта рублевая — переводим в доллары
-        amount_usd = (payment.amount / rate).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    # payment.amount всегда в долларах (бот показывает цену в долларах)
+    amount_usd = payment.amount
 
-    # Сохраняем долларовую сумму в базу, если нужно
-    payment.amount = amount_usd
-    payment.currency = 'USD'
-    payment.save(update_fields=["amount", "currency"])
-
-    # Переводим долларовую сумму в рубли для оплаты
+    # Переводим сумму в рубли для Robokassa
     amount_rub = (amount_usd * rate).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+    # Сохраняем валюту, если не указана
+    if payment.currency.upper() != "USD":
+        payment.currency = "USD"
+        payment.save(update_fields=["currency"])
 
     signature_raw = f"{login}:{amount_rub}:{payment.inv_id}:{password1}"
     signature = hashlib.md5(signature_raw.encode('utf-8')).hexdigest()
@@ -65,6 +61,7 @@ def generate_robokassa_payment_link(payment: Payment) -> str:
         params += "&IsTest=1"
 
     return f"{base_url}?{params}"
+
 
 
 def verify_robokassa_signature(out_sum: str, inv_id: str, received_signature: str) -> bool:
