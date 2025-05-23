@@ -25,24 +25,35 @@ def get_usd_to_rub_rate() -> Decimal:
         data = response.json()
         return Decimal(data['Valute']['USD']['Value']).quantize(Decimal('0.01'))
     except Exception:
-        # Если курс недоступен — можно зашить резервный
+        # Если курс недоступен — резервный курс
         return Decimal('95.00')
 
 
 def generate_robokassa_payment_link(payment: Payment) -> str:
     """
-    Формирование ссылки для оплаты через Robokassa с пересчётом из USD в RUB.
+    Формирование ссылки для оплаты через Robokassa с пересчётом в рубли.
+    Сумма всегда зачисляется на баланс в долларах.
     """
     login = settings.ROBOKASSA_LOGIN
     password1 = settings.ROBOKASSA_PASSWORD1
     is_test = settings.ROBOKASSA_IS_TEST
 
-    # Пересчёт в рубли, если валюта — доллары
+    rate = get_usd_to_rub_rate()
+
+    # Конвертируем любую валюту в доллары
     if payment.currency.lower() in ('usd', 'dollar', 'доллар'):
-        rate = get_usd_to_rub_rate()
-        amount_rub = (payment.amount * rate).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        amount_usd = payment.amount
     else:
-        amount_rub = payment.amount
+        # Допустим, если валюта рублевая — переводим в доллары
+        amount_usd = (payment.amount / rate).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+    # Сохраняем долларовую сумму в базу, если нужно
+    payment.amount = amount_usd
+    payment.currency = 'USD'
+    payment.save(update_fields=["amount", "currency"])
+
+    # Переводим долларовую сумму в рубли для оплаты
+    amount_rub = (amount_usd * rate).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
     signature_raw = f"{login}:{amount_rub}:{payment.inv_id}:{password1}"
     signature = hashlib.md5(signature_raw.encode('utf-8')).hexdigest()
