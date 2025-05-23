@@ -76,7 +76,7 @@ def payment_result(request):
     if payment.status == Payment.Status.SUCCESS:
         return Response(f"OK{inv_id}")
 
-    apply_payment(payment.user, Decimal(out_sum))
+    apply_payment(payment.user, payment.amount)
     payment.status = Payment.Status.SUCCESS
     payment.save()
 
