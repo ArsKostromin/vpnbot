@@ -130,52 +130,67 @@ class CreateCryptoPaymentAPIView(APIView):
         return Response({"payment_url": pay_url, "inv_id": payment.inv_id})
 
 
-@api_view(["POST"])
+@csrf_exempt
 def crypto_webhook(request):
-    event = request.data
-    logger.warning(f"[Webhook DEBUG] Incoming event: {event}")
-
-    if event.get("update_type") != "invoice_paid":
-        logger.warning("[Webhook] Не является событием оплаты")
-        return Response({"message": "Not a payment event"}, status=status.HTTP_200_OK)
-
-    payload_data = event.get("payload")
-    if not payload_data:
-        logger.error("[Webhook] Payload отсутствует")
-        return Response({"error": "Missing payload"}, status=status.HTTP_400_BAD_REQUEST)
-
-    # payload внутри payload
-    payload = payload_data.get("payload")
-    if not payload:
-        logger.error("[Webhook] Внутренний payload отсутствует")
-        return Response({"error": "Missing inner payload"}, status=status.HTTP_400_BAD_REQUEST)
+    if request.method != "POST":
+        return JsonResponse({"error": "Only POST allowed"}, status=405)
 
     try:
-        inv_id = int(payload)
-    except ValueError:
-        logger.error(f"[Webhook] Некорректный формат payload: {payload}")
-        return Response({"error": "Invalid payload format"}, status=status.HTTP_400_BAD_REQUEST)
+        payload = json.loads(request.body.decode("utf-8"))
+        sign = request.headers.get("sign")
 
-    try:
-        payment = Payment.objects.get(inv_id=inv_id)
-    except Payment.DoesNotExist:
-        logger.error(f"[Webhook] Платёж с inv_id={inv_id} не найден")
-        return Response({"error": "Payment not found"}, status=status.HTTP_404_NOT_FOUND)
+        if not sign:
+            return HttpResponseForbidden("Missing signature")
 
-    if payment.status == Payment.Status.SUCCESS:
-        logger.info(f"[Webhook] Платёж уже обработан: inv_id={inv_id}")
-        return Response({"message": "Already processed"}, status=status.HTTP_200_OK)
+        secret = settings.CRYPTOMUS_API_KEY.encode("utf-8")
+        body = request.body
+        calculated_sign = hmac.new(secret, body, hashlib.sha256).hexdigest()
 
-    try:
-        apply_payment(payment.user, payment.amount)
+        if calculated_sign != sign:
+            return HttpResponseForbidden("Invalid signature")
+
+        # Проверка успешности оплаты
+        status = payload.get("status")
+        order_id = payload.get("order_id")
+        amount = payload.get("amount")
+        currency = payload.get("currency")
+
+        if status != "paid":
+            return JsonResponse({"ok": True})  # просто игнорируем, если не "paid"
+
+        # Пример order_id: user_{tg_id}_{amount}_{рандом}
+        try:
+            _, telegram_id, _amount, *_ = order_id.split("_")
+            user = VPNUser.objects.get(telegram_id=int(telegram_id))
+        except Exception as e:
+            return JsonResponse({"error": "Invalid order_id"}, status=400)
+
+        # Создание или обновление платежа
+        payment, created = Payment.objects.get_or_create(
+            inv_id=payload.get("payment_id"),
+            defaults={
+                "user": user,
+                "amount": Decimal(amount),
+                "currency": currency,
+                "status": Payment.Status.SUCCESS,
+            }
+        )
+
+        if not created and payment.status == Payment.Status.SUCCESS:
+            return JsonResponse({"ok": True})  # уже обработан
+
+        # Обновим статус, если вдруг был pending
         payment.status = Payment.Status.SUCCESS
         payment.save()
-        logger.info(f"[Webhook] Платёж успешно обработан: inv_id={inv_id}")
-        return Response({"message": "Payment processed"}, status=status.HTTP_200_OK)
-    except Exception as e:
-        logger.exception(f"[Webhook] Ошибка при применении платежа inv_id={inv_id}: {e}")
-        return Response({"error": "Internal error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+        # Пополняем баланс
+        user.balance += Decimal(amount)
+        user.save()
+
+        return JsonResponse({"ok": True})
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
 
 
 class StarPaymentAPIView(APIView):
