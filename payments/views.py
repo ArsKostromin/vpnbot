@@ -68,38 +68,46 @@ def payment_result(request):
     received_signature = request.data.get("SignatureValue", "").strip()
 
     if not out_sum or not inv_id or not received_signature:
+        logger.warning(f"[payment_result] Не хватает полей: OutSum={out_sum}, InvId={inv_id}, Signature={received_signature}")
         return Response({"error": "Missing required fields."}, status=status.HTTP_400_BAD_REQUEST)
 
     if not verify_robokassa_signature(out_sum, inv_id, received_signature):
+        logger.warning(f"[payment_result] Неверная подпись для InvId={inv_id}")
         return Response({"error": "Invalid signature."}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         payment = Payment.objects.get(inv_id=inv_id)
     except Payment.DoesNotExist:
+        logger.error(f"[payment_result] Платёж с InvId={inv_id} не найден")
         return Response({"error": "Payment not found."}, status=status.HTTP_404_NOT_FOUND)
 
     if payment.status == Payment.Status.SUCCESS:
+        logger.info(f"[payment_result] Повторный колбэк: платёж {inv_id} уже успешно обработан")
         return Response(f"OK{inv_id}")
 
     apply_payment(payment.user, payment.amount)
     payment.status = Payment.Status.SUCCESS
     payment.save()
+    logger.info(f"[payment_result] Платёж {inv_id} успешно применён и сохранён")
 
-    # 💬 Сюда отправляем POST-запрос боту
+    notify_payload = {
+        "tg_id": payment.user.telegram_id,
+        "amount": payment.amount,
+        "payment_id": inv_id
+    }
+
     try:
+        logger.info(f"[payment_result] Отправляем POST-запрос боту: {notify_payload}")
         response = requests.post(
             "http://vpn_bot:8081/notify", 
-            json={
-                "tg_id": payment.user.telegram_id,
-                "amount": payment.amount,
-                "payment_id": inv_id
-            },
+            json=notify_payload,
             timeout=3
         )
         response.raise_for_status()
+        logger.info(f"[payment_result] Бот ответил: {response.status_code} {response.text}")
+
     except Exception as e:
-        # залогируй или выведи как хочешь
-        print(f"[!] Ошибка при отправке в бота: {e}")
+        logger.error(f"[payment_result] Ошибка при отправке уведомления в бота: {e}")
 
     return Response(f"OK{inv_id}")
 
