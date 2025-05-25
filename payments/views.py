@@ -140,16 +140,17 @@ def crypto_webhook(request):
         return JsonResponse({"error": "Only POST allowed"}, status=405)
 
     try:
-        payload = json.loads(request.body.decode("utf-8"))
         sign = request.headers.get("sign")
-
         if not sign:
             return HttpResponseForbidden("Missing signature")
 
         secret = settings.CRYPTOMUS_API_KEY.encode("utf-8")
-        body = request.body
-        calculated_sign = hmac.new(secret, body, hashlib.sha256).hexdigest()
 
+        # Нормализуем JSON
+        payload = json.loads(request.body.decode("utf-8"))
+        normalized_json = json.dumps(payload, separators=(',', ':')).encode("utf-8")
+
+        calculated_sign = hmac.new(secret, normalized_json, hashlib.sha256).hexdigest()
         if calculated_sign != sign:
             return HttpResponseForbidden("Invalid signature")
 
@@ -160,16 +161,14 @@ def crypto_webhook(request):
         currency = payload.get("currency")
 
         if status != "paid":
-            return JsonResponse({"ok": True})  # просто игнорируем, если не "paid"
+            return JsonResponse({"ok": True})
 
-        # Пример order_id: user_{tg_id}_{amount}_{рандом}
         try:
             _, telegram_id, _amount, *_ = order_id.split("_")
             user = VPNUser.objects.get(telegram_id=int(telegram_id))
-        except Exception as e:
+        except Exception:
             return JsonResponse({"error": "Invalid order_id"}, status=400)
 
-        # Создание или обновление платежа
         payment, created = Payment.objects.get_or_create(
             inv_id=payload.get("payment_id"),
             defaults={
@@ -181,13 +180,11 @@ def crypto_webhook(request):
         )
 
         if not created and payment.status == Payment.Status.SUCCESS:
-            return JsonResponse({"ok": True})  # уже обработан
+            return JsonResponse({"ok": True})
 
-        # Обновим статус, если вдруг был pending
         payment.status = Payment.Status.SUCCESS
         payment.save()
 
-        # Пополняем баланс
         user.balance += Decimal(amount)
         user.save()
 
