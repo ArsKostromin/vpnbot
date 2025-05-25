@@ -167,26 +167,24 @@ def crypto_webhook(request):
         return JsonResponse({"error": "Only POST allowed"}, status=405)
 
     try:
-        logger.info(f"Webhook headers: {dict(request.headers)}")
-        logger.info(f"Webhook raw body: {request.body}")
-        
+        logger.info(f"[crypto_webhook] Headers: {dict(request.headers)}")
+        logger.info(f"[crypto_webhook] Raw body: {request.body}")
+
         sign = request.headers.get("sign")
         if not sign:
             return HttpResponseForbidden("Missing signature")
 
         secret = settings.CRYPTOMUS_API_KEY.encode("utf-8")
-
         payload = json.loads(request.body.decode("utf-8"))
         normalized_json = json.dumps(payload, separators=(',', ':')).encode("utf-8")
         calculated_sign = hmac.new(secret, normalized_json, hashlib.sha256).hexdigest()
 
-        logger.info(f"Calculated sign: {calculated_sign}")
-        logger.info(f"Received sign: {sign}")
-        
+        logger.info(f"[crypto_webhook] Calculated sign: {calculated_sign}")
+        logger.info(f"[crypto_webhook] Received sign: {sign}")
+
         if calculated_sign != sign:
             return HttpResponseForbidden("Invalid signature")
 
-        # Проверка успешности оплаты
         status = payload.get("status")
         order_id = payload.get("order_id")
         amount = payload.get("amount")
@@ -220,9 +218,29 @@ def crypto_webhook(request):
         user.balance += Decimal(amount)
         user.save()
 
+        # ⬇️ Уведомление бота
+        notify_payload = {
+            "tg_id": user.telegram_id,
+            "amount": float(amount),
+            "payment_id": payload.get("payment_id")
+        }
+
+        try:
+            logger.info(f"[crypto_webhook] Отправляем POST-запрос боту: {notify_payload}")
+            response = requests.post(
+                "http://vpn_bot:8081/notify",
+                json=notify_payload,
+                timeout=3
+            )
+            response.raise_for_status()
+            logger.info(f"[crypto_webhook] Бот ответил: {response.status_code} {response.text}")
+        except Exception as e:
+            logger.error(f"[crypto_webhook] Ошибка при отправке уведомления в бота: {e}")
+
         return JsonResponse({"ok": True})
 
     except Exception as e:
+        logger.exception("[crypto_webhook] Общая ошибка")
         return JsonResponse({"error": str(e)}, status=500)
 
 
