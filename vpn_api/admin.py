@@ -4,9 +4,9 @@ from .models import SubscriptionPlan, Subscription
 
 @admin.register(SubscriptionPlan)
 class SubscriptionPlanAdmin(admin.ModelAdmin):
-    list_display = ('vpn_type', 'duration', 'price')
-    list_filter = ('vpn_type', 'duration')
-    search_fields = ('vpn_type',)
+    list_display = ('vpn_type', 'duration', 'price', 'discount_percent')
+    list_filter = ('vpn_type', 'duration', 'discount_percent')
+    search_fields = ('vpn_type', 'duration', 'price', 'discount_percent')
 
 @admin.register(Subscription)
 class SubscriptionAdmin(admin.ModelAdmin):
@@ -30,9 +30,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
             return obj.vless[:40] + "..."
         return "-"
     short_vless_link.short_description = "VLESS"
-    
-    
-    
+
 
 from django_celery_beat.models import (
     PeriodicTask, IntervalSchedule, CrontabSchedule,
