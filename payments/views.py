@@ -88,7 +88,7 @@ def payment_result(request):
     # 💬 Сюда отправляем POST-запрос боту
     try:
         response = requests.post(
-            "http://vpn-bot:8081/notify",
+            "http://vpn-bot:8081/notify", 
             json={
                 "tg_id": payment.user.telegram_id,
                 "amount": payment.amount,
