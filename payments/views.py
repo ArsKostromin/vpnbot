@@ -134,36 +134,64 @@ class CreateCryptoPaymentAPIView(APIView):
         return Response({"payment_url": pay_url, "inv_id": payment.inv_id})
 
 
-import logging
-logger = logging.getLogger(__name__)
-
 @csrf_exempt
 def crypto_webhook(request):
     if request.method != "POST":
         return JsonResponse({"error": "Only POST allowed"}, status=405)
 
     try:
-        logger.info(f"Webhook headers: {dict(request.headers)}")
-        logger.info(f"Webhook raw body: {request.body}")
-        
         sign = request.headers.get("sign")
         if not sign:
             return HttpResponseForbidden("Missing signature")
 
         secret = settings.CRYPTOMUS_API_KEY.encode("utf-8")
 
+        # Нормализуем JSON
         payload = json.loads(request.body.decode("utf-8"))
         normalized_json = json.dumps(payload, separators=(',', ':')).encode("utf-8")
+
         calculated_sign = hmac.new(secret, normalized_json, hashlib.sha256).hexdigest()
-
-        logger.info(f"Calculated sign: {calculated_sign}")
-        logger.info(f"Received sign: {sign}")
-
         if calculated_sign != sign:
             return HttpResponseForbidden("Invalid signature")
-        
-        ...
 
+        # Проверка успешности оплаты
+        status = payload.get("status")
+        order_id = payload.get("order_id")
+        amount = payload.get("amount")
+        currency = payload.get("currency")
+
+        if status != "paid":
+            return JsonResponse({"ok": True})
+
+        try:
+            _, telegram_id, _amount, *_ = order_id.split("_")
+            user = VPNUser.objects.get(telegram_id=int(telegram_id))
+        except Exception:
+            return JsonResponse({"error": "Invalid order_id"}, status=400)
+
+        payment, created = Payment.objects.get_or_create(
+            inv_id=payload.get("payment_id"),
+            defaults={
+                "user": user,
+                "amount": Decimal(amount),
+                "currency": currency,
+                "status": Payment.Status.SUCCESS,
+            }
+        )
+
+        if not created and payment.status == Payment.Status.SUCCESS:
+            return JsonResponse({"ok": True})
+
+        payment.status = Payment.Status.SUCCESS
+        payment.save()
+
+        user.balance += Decimal(amount)
+        user.save()
+
+        return JsonResponse({"ok": True})
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
 
 
 class StarPaymentAPIView(APIView):
