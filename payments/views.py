@@ -133,6 +133,8 @@ class CreateCryptoPaymentAPIView(APIView):
         pay_url = generate_crypto_payment_link(payment, asset, amount_rub)
         return Response({"payment_url": pay_url, "inv_id": payment.inv_id})
 
+import logging
+logger = logging.getLogger(__name__)
 
 @csrf_exempt
 def crypto_webhook(request):
@@ -140,17 +142,22 @@ def crypto_webhook(request):
         return JsonResponse({"error": "Only POST allowed"}, status=405)
 
     try:
+        logger.info(f"Webhook headers: {dict(request.headers)}")
+        logger.info(f"Webhook raw body: {request.body}")
+        
         sign = request.headers.get("sign")
         if not sign:
             return HttpResponseForbidden("Missing signature")
 
         secret = settings.CRYPTOMUS_API_KEY.encode("utf-8")
 
-        # Нормализуем JSON
         payload = json.loads(request.body.decode("utf-8"))
         normalized_json = json.dumps(payload, separators=(',', ':')).encode("utf-8")
-
         calculated_sign = hmac.new(secret, normalized_json, hashlib.sha256).hexdigest()
+
+        logger.info(f"Calculated sign: {calculated_sign}")
+        logger.info(f"Received sign: {sign}")
+        
         if calculated_sign != sign:
             return HttpResponseForbidden("Invalid signature")
 
