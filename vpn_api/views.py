@@ -1,4 +1,4 @@
-#vpn_api/views.py
+# vpn_api/views.py
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
@@ -7,10 +7,8 @@ from .serializers import BuySubscriptionSerializer, SubscriptionPlanSerializer
 from .models import Subscription, SubscriptionPlan
 from user.models import VPNUser
 from django.utils import timezone
-from datetime import timedelta
-from .utils import create_vless, delete_vless  # пусть функция будет там
-from django.shortcuts import render
 import uuid
+from .utils import create_vless
 from .services import extend_subscription, get_duration_delta
 
 
@@ -31,9 +29,7 @@ class BuySubscriptionView(APIView):
         serializer.is_valid(raise_exception=True)
 
         plan = serializer.validated_data['plan']
-
-        if user.balance < plan.price:
-            return Response({"error": "Недостаточно средств"}, status=status.HTTP_400_BAD_REQUEST)
+        price = serializer.validated_data['price']
 
         active_subscriptions = user.subscriptions.filter(is_active=True, end_date__gt=timezone.now())
         same_type_sub = active_subscriptions.filter(plan__vpn_type=plan.vpn_type).first()
@@ -44,7 +40,7 @@ class BuySubscriptionView(APIView):
             except ValueError as e:
                 return Response({"error": str(e)}, status=500)
 
-            user.balance -= plan.price
+            user.balance -= price
             user.save()
 
             return Response({
@@ -78,7 +74,7 @@ class BuySubscriptionView(APIView):
             uuid=user_uuid
         )
 
-        user.balance -= plan.price
+        user.balance -= price
         user.save()
 
         return Response({

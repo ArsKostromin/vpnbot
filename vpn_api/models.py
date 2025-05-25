@@ -18,17 +18,30 @@ class SubscriptionPlan(models.Model):
 
     DURATION_CHOICES = [
         ('1m', '1 месяц'),
+        ('3m', '3 месяцев'),
         ('6m', '6 месяцев'),
         ('1y', '1 год'),
-        ('3y', '3 года'),
     ]
 
     vpn_type = models.CharField(max_length=10, choices=VPN_TYPES, verbose_name='Тип впн')
     duration = models.CharField(max_length=2, choices=DURATION_CHOICES, verbose_name='Длительность')
     price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Цена')
+    discount_active = models.BooleanField(default=False, verbose_name="Скидка активна")
+    discount_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Цена со скидкой")
+    discount_text = models.CharField(max_length=255, null=True, blank=True, verbose_name="Текст скидки (для отображения в боте)")
+    
+    def get_current_price(self):
+        if self.discount_active and self.discount_price:
+            return self.discount_price
+        return self.price
+
+    def get_display_price(self, with_discount=True):
+        if self.discount_active and self.discount_price and with_discount:
+            return f"~{self.price}₽~ {self.discount_price}₽"
+        return f"{self.price}₽"
 
     def __str__(self):
-        return f"{self.get_vpn_type_display()} ({self.get_duration_display()}) – {self.price}₽"
+        return f"{self.get_vpn_type_display()} ({self.get_duration_display()}) – {self.get_display_price()}"
 
     class Meta:
         verbose_name_plural = 'Тарифы'
@@ -48,9 +61,9 @@ class Subscription(models.Model):
     def calculate_end_date(self):
         duration_map = {
             '1m': relativedelta(months=1),
+            '3m': relativedelta(months=3),
             '6m': relativedelta(months=6),
             '1y': relativedelta(years=1),
-            '3y': relativedelta(years=3),
         }
         duration = duration_map.get(self.plan.duration)
         if duration is None:
