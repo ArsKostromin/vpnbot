@@ -2,6 +2,7 @@
 import hashlib
 from decimal import Decimal, InvalidOperation
 import hmac
+import requests
 import json
 from django.http import JsonResponse, HttpResponseForbidden
 from django.views.decorators.csrf import csrf_exempt
@@ -83,6 +84,22 @@ def payment_result(request):
     apply_payment(payment.user, payment.amount)
     payment.status = Payment.Status.SUCCESS
     payment.save()
+
+    # 💬 Сюда отправляем POST-запрос боту
+    try:
+        response = requests.post(
+            "http://vpn-bot:8081/notify",
+            json={
+                "tg_id": payment.user.telegram_id,
+                "amount": payment.amount,
+                "payment_id": inv_id
+            },
+            timeout=3
+        )
+        response.raise_for_status()
+    except Exception as e:
+        # залогируй или выведи как хочешь
+        print(f"[!] Ошибка при отправке в бота: {e}")
 
     return Response(f"OK{inv_id}")
 
