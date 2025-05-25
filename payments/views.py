@@ -92,7 +92,7 @@ def payment_result(request):
 
     notify_payload = {
         "tg_id": payment.user.telegram_id,
-        "amount": payment.amount,
+        "amount": float(payment.amount),
         "payment_id": inv_id
     }
 
