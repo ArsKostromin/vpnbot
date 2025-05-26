@@ -114,15 +114,51 @@ def payment_result(request):
 
 @api_view(["GET", "POST"])
 def success_payment(request):
-    """Страница при успешной оплате."""
-    return HttpResponse("<h1>Оплата прошла успешно! 🎉</h1>")
+    """Закрывает окно после успешной оплаты."""
+    return HttpResponse("""
+        <html>
+            <head>
+                <title>Оплата прошла успешно</title>
+                <script>
+                    // Пытаемся закрыть окно
+                    window.onload = function() {
+                        window.close();
+                        setTimeout(() => {
+                            window.location.href = 'https://t.me/YourBotUsername'; // fallback
+                        }, 1000);
+                    }
+                </script>
+            </head>
+            <body>
+                <h1>Оплата прошла успешно! 🎉</h1>
+                <p>Вы будете перенаправлены...</p>
+            </body>
+        </html>
+    """)
 
 
 @api_view(["GET", "POST"])
 def fail_payment(request):
-    """Страница при ошибке оплаты или отмене."""
-    return HttpResponse("<h1>Оплата отменена или ошибка платежа.</h1>")
-
+    """Закрывает окно при ошибке/отмене."""
+    return HttpResponse("""
+        <html>
+            <head>
+                <title>Ошибка оплаты</title>
+                <script>
+                    window.onload = function() {
+                        window.close();
+                        setTimeout(() => {
+                            window.location.href = 'https://t.me/YourBotUsername'; // fallback
+                        }, 1000);
+                    }
+                </script>
+            </head>
+            <body>
+                <h1>Оплата отменена или произошла ошибка.</h1>
+                <p>Вы будете перенаправлены...</p>
+            </body>
+        </html>
+    """)
 
 class CreateCryptoPaymentAPIView(APIView):
     """
