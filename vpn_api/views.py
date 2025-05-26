@@ -29,16 +29,18 @@ class BuySubscriptionView(APIView):
         serializer.is_valid(raise_exception=True)
 
         plan = serializer.validated_data['plan']
-        price = serializer.validated_data['price']
+        price = plan.get_current_price()  # 💰 используем цену со скидкой, если она активна
 
+        # Активные подписки такого же типа
         active_subscriptions = user.subscriptions.filter(is_active=True, end_date__gt=timezone.now())
         same_type_sub = active_subscriptions.filter(plan__vpn_type=plan.vpn_type).first()
 
         if same_type_sub:
+            # Продление подписки
             try:
                 extend_subscription(same_type_sub, plan)
             except ValueError as e:
-                return Response({"error": str(e)}, status=500)
+                return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             user.balance -= price
             user.save()
@@ -56,11 +58,11 @@ class BuySubscriptionView(APIView):
         user_uuid = uuid.uuid4()
         vless_result = create_vless(user_uuid)
         if not vless_result["success"]:
-            return Response({"error": "Ошибка создания VLESS"}, status=500)
+            return Response({"error": "Ошибка создания VLESS"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         delta = get_duration_delta(plan.duration)
         if not delta:
-            return Response({"error": "Неизвестная длительность плана"}, status=500)
+            return Response({"error": "Неизвестная длительность плана"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         start_date = timezone.now()
         end_date = start_date + delta
