@@ -17,11 +17,12 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
             'duration',
             'duration_display',
             'price',
-            'discount_price',
             'discount_active',
-            'discount_text',
+            'discount_percent',
+            'discount_price',
             'current_price',
             'display_price',
+            'discount_text',
         ]
 
     def get_vpn_type_display(self, obj):
@@ -31,7 +32,7 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
         return obj.get_duration_display()
 
     def get_current_price(self, obj):
-        return obj.get_current_price()
+        return str(obj.get_current_price())
 
     def get_display_price(self, obj):
         return obj.get_display_price()
