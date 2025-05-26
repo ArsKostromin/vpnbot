@@ -1,4 +1,3 @@
-#vpn_api/models
 from django.db import models
 from django.utils import timezone
 from dateutil.relativedelta import relativedelta
@@ -26,10 +25,12 @@ class SubscriptionPlan(models.Model):
     vpn_type = models.CharField(max_length=10, choices=VPN_TYPES, verbose_name='Тип впн')
     duration = models.CharField(max_length=2, choices=DURATION_CHOICES, verbose_name='Длительность')
     price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Цена')
+
     discount_active = models.BooleanField(default=False, verbose_name="Скидка активна")
+    discount_percent = models.PositiveIntegerField(default=0, verbose_name="Скидка в %")
     discount_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Цена со скидкой")
     discount_text = models.CharField(max_length=255, null=True, blank=True, verbose_name="Текст скидки (для отображения в боте)")
-    
+
     def get_current_price(self):
         if self.discount_active and self.discount_price:
             return self.discount_price
@@ -39,6 +40,13 @@ class SubscriptionPlan(models.Model):
         if self.discount_active and self.discount_price and with_discount:
             return f"~{self.price}₽~ {self.discount_price}₽"
         return f"{self.price}₽"
+
+    def save(self, *args, **kwargs):
+        if self.discount_active and self.discount_percent > 0:
+            self.discount_price = round(self.price * (100 - self.discount_percent) / 100, 2)
+        else:
+            self.discount_price = None
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.get_vpn_type_display()} ({self.get_duration_display()}) – {self.get_display_price()}"
@@ -56,7 +64,7 @@ class Subscription(models.Model):
     auto_renew = models.BooleanField(default=True, verbose_name='Автопродление')
     paused = models.BooleanField(default=False, verbose_name='Пауза')
     vless = models.TextField(blank=True, null=True, verbose_name='VLESS конфиг')
-    uuid = models.UUIDField(default=uuid.uuid4, editable=False, verbose_name="UUID", blank=True, null=True,)
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, verbose_name="UUID", blank=True, null=True)
 
     def calculate_end_date(self):
         duration_map = {
@@ -70,27 +78,12 @@ class Subscription(models.Model):
             raise ValueError(f"Unknown plan duration: {self.plan.duration}")
         return self.start_date + duration
 
-
-    # @staticmethod
-    # def generate_vless_config(user_uuid, domain="server2.anonixvpn.space", port=443, path="/vless", tag="AnonixVPN"):
-    #     encoded_path = urllib.parse.quote(path)
-    #     return f"vless://{user_uuid}@{domain}:{port}?encryption=none&type=ws&security=tls&path={encoded_path}#{tag}"
-
-
     def save(self, *args, **kwargs):
         if not self.end_date:
             self.end_date = self.calculate_end_date()
 
         if self.end_date and self.end_date < timezone.now():
             self.is_active = False
-
-        # if not self.vless:
-        #     user_uuid = str(uuid.uuid4())
-        #     self.vless = self.generate_vless_config(
-        #         user_uuid=user_uuid,
-        #         domain=settings.SERVER_DOMAIN  # ← используем domain, не ip
-        #     )
-        #     apply_vless_on_server(user_uuid)
 
         super().save(*args, **kwargs)
 
