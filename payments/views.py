@@ -124,7 +124,7 @@ def success_payment(request):
                     window.onload = function() {
                         window.close();
                         setTimeout(() => {
-                            window.location.href = 'https://t.me/YourBotUsername'; // fallback
+                            window.location.href = 'https://t.me/fastvpnVPNs_bot'; // fallback
                         }, 1000);
                     }
                 </script>
@@ -148,7 +148,7 @@ def fail_payment(request):
                     window.onload = function() {
                         window.close();
                         setTimeout(() => {
-                            window.location.href = 'https://t.me/YourBotUsername'; // fallback
+                            window.location.href = 'https://t.me/fastvpnVPNs_bot'; // fallback
                         }, 1000);
                     }
                 </script>
