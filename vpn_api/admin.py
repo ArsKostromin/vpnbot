@@ -8,7 +8,8 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
     list_filter = ('vpn_type', 'duration', 'discount_active')
     search_fields = ('vpn_type',)
     readonly_fields = ('discount_price',)
-
+    exclude = ('discount_text',)
+    
 @admin.register(Subscription)
 class SubscriptionAdmin(admin.ModelAdmin):
     list_display = (
