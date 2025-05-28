@@ -1,4 +1,5 @@
 # vpn_api/views.py
+import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
@@ -18,41 +19,43 @@ class BuySubscriptionView(APIView):
 
     def post(self, request):
         telegram_id = request.data.get("telegram_id")
-        print(f"[DEBUG] Получен telegram_id: {telegram_id}")
+        logger.debug(f"Получен telegram_id: {telegram_id}")
+
         if not telegram_id:
             return Response({"error": "telegram_id обязателен"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             user = VPNUser.objects.get(telegram_id=telegram_id)
-            print(f"[DEBUG] Пользователь найден: {user}")
+            logger.debug(f"Пользователь найден: {user}")
         except VPNUser.DoesNotExist:
-            print(f"[ERROR] Пользователь с telegram_id={telegram_id} не найден")
+            logger.warning(f"Пользователь с telegram_id={telegram_id} не найден")
             return Response({"error": "Пользователь не найден"}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = BuySubscriptionSerializer(data=request.data, context={'user': user})
         serializer.is_valid(raise_exception=True)
 
         plan = serializer.validated_data['plan']
-        print(f"[DEBUG] Выбранный план: ID={plan.id}, vpn_type={plan.vpn_type}, duration={plan.duration}")
+        logger.debug(f"Выбранный план: ID={plan.id}, vpn_type={plan.vpn_type}, duration={plan.duration}")
 
         price = plan.get_current_price()
-        print(f"[DEBUG] Цена плана (со скидкой если есть): {price}")
+        logger.debug(f"Цена плана (со скидкой если есть): {price}")
 
         active_subscriptions = user.subscriptions.filter(is_active=True, end_date__gt=timezone.now())
         same_type_sub = active_subscriptions.filter(plan__vpn_type=plan.vpn_type).first()
 
         if same_type_sub:
-            print(f"[DEBUG] Найдена активная подписка такого же типа, продлеваем...")
+            logger.debug("Найдена активная подписка такого же типа, продлеваем...")
+
             try:
                 extend_subscription(same_type_sub, plan)
-                print(f"[DEBUG] Подписка продлена успешно")
+                logger.debug("Подписка продлена успешно")
             except ValueError as e:
-                print(f"[ERROR] Ошибка продления: {str(e)}")
+                logger.error(f"Ошибка продления: {str(e)}")
                 return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             user.balance -= price
             user.save()
-            print(f"[DEBUG] Баланс после списания: {user.balance}")
+            logger.debug(f"Баланс после списания: {user.balance}")
 
             return Response({
                 "message": "Подписка успешно продлена",
@@ -64,25 +67,26 @@ class BuySubscriptionView(APIView):
             }, status=status.HTTP_200_OK)
 
         # Новая подписка
-        user_uuid = uuid.uuid4()
-        print(f"[DEBUG] Сгенерирован UUID: {user_uuid}")
+        user_uuid = uuid4()
+        logger.debug(f"Сгенерирован UUID: {user_uuid}")
+
         vless_result = create_vless(user_uuid)
-        print(f"[DEBUG] Результат создания VLESS: {vless_result}")
+        logger.debug(f"Результат создания VLESS: {vless_result}")
 
         if not vless_result["success"]:
-            print(f"[ERROR] Ошибка создания VLESS: {vless_result}")
+            logger.error(f"Ошибка создания VLESS: {vless_result}")
             return Response({"error": "Ошибка создания VLESS"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         delta = get_duration_delta(plan.duration)
-        print(f"[DEBUG] Расчитанная длительность (delta): {delta}")
+        logger.debug(f"Расчитанная длительность (delta): {delta}")
 
         if not delta:
-            print(f"[ERROR] Неизвестная длительность плана: {plan.duration}")
+            logger.error(f"Неизвестная длительность плана: {plan.duration}")
             return Response({"error": "Неизвестная длительность плана"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         start_date = timezone.now()
         end_date = start_date + delta
-        print(f"[DEBUG] Даты подписки: start={start_date}, end={end_date}")
+        logger.debug(f"Даты подписки: start={start_date}, end={end_date}")
 
         subscription = Subscription.objects.create(
             user=user,
@@ -92,11 +96,11 @@ class BuySubscriptionView(APIView):
             vless=vless_result["vless_link"],
             uuid=user_uuid
         )
-        print(f"[DEBUG] Создана подписка: {subscription}")
+        logger.info(f"Создана новая подписка: {subscription}")
 
         user.balance -= price
         user.save()
-        print(f"[DEBUG] Баланс после покупки: {user.balance}")
+        logger.debug(f"Баланс после покупки: {user.balance}")
 
         return Response({
             "message": "Подписка успешно оформлена",
@@ -106,7 +110,6 @@ class BuySubscriptionView(APIView):
             "vless": subscription.vless,
             "uuid": subscription.uuid
         }, status=status.HTTP_201_CREATED)
-
 
 
 class SubscriptionPlanListView(APIView):
