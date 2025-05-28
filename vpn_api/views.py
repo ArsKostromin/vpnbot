@@ -10,10 +10,8 @@ from django.utils import timezone
 import uuid
 from .utils import create_vless
 from .services import extend_subscription, get_duration_delta
-import logging
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+
 
 class BuySubscriptionView(APIView):
     permission_classes = [AllowAny]
