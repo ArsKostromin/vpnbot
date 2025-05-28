@@ -17,8 +17,8 @@ class SubscriptionPlan(models.Model):
 
     DURATION_CHOICES = [
         ('1m', '1 месяц'),
-        ('3m', '3 месяцев'),
-        ('6m', '6 месяцев'),
+        ('3m', '3 месяца'),
+        ('6m', '6 месяца'),
         ('1y', '1 год'),
     ]
 
