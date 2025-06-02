@@ -42,8 +42,8 @@ def delete_vless(uuid: str) -> bool:
 def get_duration_delta(duration_code: str):
     duration_map = {
         '1m': relativedelta(months=1),
+        '3m': relativedelta(months=3),
         '6m': relativedelta(months=6),
         '1y': relativedelta(years=1),
-        '3y': relativedelta(years=3),
     }
     return duration_map.get(duration_code)
