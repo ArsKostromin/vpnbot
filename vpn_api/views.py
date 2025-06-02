@@ -12,6 +12,7 @@ import uuid
 from .utils import create_vless
 from .services import extend_subscription, get_duration_delta
 
+logger = logging.getLogger(__name__)
 
 
 class BuySubscriptionView(APIView):
