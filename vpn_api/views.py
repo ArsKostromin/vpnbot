@@ -11,6 +11,8 @@ from django.utils import timezone
 import uuid
 from .utils import create_vless
 from .services import extend_subscription, get_duration_delta
+from uuid import uuid4, UUID
+
 
 logger = logging.getLogger(__name__)
 
