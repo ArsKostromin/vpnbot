@@ -10,7 +10,7 @@ from user.models import VPNUser
 from django.utils import timezone
 import uuid
 from .utils import create_vless
-from .services import extend_subscription, get_duration_delta
+from .services import extend_subscription, get_duration_delta, get_least_loaded_server, get_least_loaded_server_by_country
 from uuid import uuid4, UUID
 
 
@@ -43,11 +43,16 @@ class BuySubscriptionView(APIView):
         price = plan.get_current_price()
         logger.debug(f"Цена плана (со скидкой если есть): {price}")
 
+        # Проверка на активную подписку того же типа
         active_subscriptions = user.subscriptions.filter(is_active=True, end_date__gt=timezone.now())
         same_type_sub = active_subscriptions.filter(plan__vpn_type=plan.vpn_type).first()
 
         if same_type_sub:
             logger.debug("Найдена активная подписка такого же типа, продлеваем...")
+
+            if user.balance < price:
+                logger.warning("Недостаточно средств для продления подписки")
+                return Response({"error": "Недостаточно средств"}, status=402)
 
             try:
                 extend_subscription(same_type_sub, plan)
@@ -66,14 +71,34 @@ class BuySubscriptionView(APIView):
                 "start_date": same_type_sub.start_date,
                 "end_date": same_type_sub.end_date,
                 "vless": same_type_sub.vless,
-                "uuid": same_type_sub.uuid
+                "uuid": str(same_type_sub.uuid)
             }, status=status.HTTP_200_OK)
 
         # Новая подписка
+        if user.balance < price:
+            logger.warning("Недостаточно средств для новой подписки")
+            return Response({"error": "Недостаточно средств"}, status=402)
+
         user_uuid = uuid4()
         logger.debug(f"Сгенерирован UUID: {user_uuid}")
 
-        vless_result = create_vless(user_uuid)
+        # Выбор сервера
+        if plan.vpn_type == "country":
+            country = request.data.get("country")
+            if not country:
+                return Response({"error": "Не указана страна"}, status=status.HTTP_400_BAD_REQUEST)
+            server = get_least_loaded_server_by_country(country)
+        else:
+            server = get_least_loaded_server()
+
+        if not server:
+            logger.error("Нет доступных серверов")
+            return Response({"error": "Нет доступных серверов"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        logger.debug(f"Выбран сервер: {server.name} ({server.country})")
+
+        # Генерация VLESS
+        vless_result = create_vless(server, user_uuid)
         logger.debug(f"Результат создания VLESS: {vless_result}")
 
         if not vless_result["success"]:
@@ -81,8 +106,6 @@ class BuySubscriptionView(APIView):
             return Response({"error": "Ошибка создания VLESS"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         delta = get_duration_delta(plan.duration)
-        logger.debug(f"Расчитанная длительность (delta): {delta}")
-
         if not delta:
             logger.error(f"Неизвестная длительность плана: {plan.duration}")
             return Response({"error": "Неизвестная длительность плана"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -111,7 +134,7 @@ class BuySubscriptionView(APIView):
             "start_date": subscription.start_date,
             "end_date": subscription.end_date,
             "vless": subscription.vless,
-            "uuid": subscription.uuid
+            "uuid": str(subscription.uuid)
         }, status=status.HTTP_201_CREATED)
 
 

@@ -3,6 +3,7 @@ from vpn_api.models import Subscription
 from celery import shared_task
 from .utils import delete_vless
 
+
 @shared_task
 def check_expired_subscriptions():
     now = timezone.now()
@@ -12,12 +13,12 @@ def check_expired_subscriptions():
         sub.is_active = False
         sub.save()
 
-        if sub.user and sub.user.uuid:
+        if sub.uuid and sub.server:
             try:
-                result = delete_vless(str(sub.user.uuid))
-                if result.get("success"):
-                    print(f"[check_expired_subscriptions] VLESS удалён: {sub.user.uuid}")
+                success = delete_vless(sub.server, str(sub.uuid))
+                if success:
+                    print(f"[check_expired_subscriptions] VLESS удалён: {sub.uuid}")
                 else:
-                    print(f"[check_expired_subscriptions] Ошибка удаления VLESS: {result.get('message')}")
+                    print(f"[check_expired_subscriptions] Не удалось удалить VLESS: {sub.uuid}")
             except Exception as e:
-                print(f"[check_expired_subscriptions] Ошибка при вызове delete_vless: {e}")
+                print(f"[check_expired_subscriptions] Ошибка при удалении VLESS: {e}")

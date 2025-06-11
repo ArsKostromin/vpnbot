@@ -90,3 +90,14 @@ class Subscription(models.Model):
     class Meta:
         verbose_name_plural = 'Подписки'
         verbose_name = 'Подписку'
+
+
+class VPNServer(models.Model):
+    country = models.CharField(max_length=50, verbose_name="Страна")  # просто текстом, типа '🇺🇸 США'
+    name = models.CharField(max_length=100, verbose_name="Название (например, us1)")
+    domain = models.CharField(max_length=255, verbose_name="Домен (например, us1.anonixvpn.space)")
+    api_url = models.URLField(verbose_name="FastAPI URL (https://domain/api)")
+    is_active = models.BooleanField(default=True, verbose_name="Активен")
+
+    def __str__(self):
+        return f"{self.country} — {self.name}"

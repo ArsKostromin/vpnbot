@@ -1,6 +1,6 @@
 # vpn_api/admin.py
 from django.contrib import admin
-from .models import SubscriptionPlan, Subscription
+from .models import SubscriptionPlan, Subscription, VPNServer
 
 @admin.register(SubscriptionPlan)
 class SubscriptionPlanAdmin(admin.ModelAdmin):
@@ -36,6 +36,13 @@ from django_celery_beat.models import (
     PeriodicTask, IntervalSchedule, CrontabSchedule,
     SolarSchedule, ClockedSchedule
 )
+
+@admin.register(VPNServer)
+class VPNServerAdmin(admin.ModelAdmin):
+    list_display = ('name', 'country', 'domain', 'api_url', 'is_active')
+    list_filter = ('is_active', 'country')
+    search_fields = ('name', 'country', 'domain', 'api_url')
+
 
 def safe_unregister(model):
     try:

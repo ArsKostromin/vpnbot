@@ -1,13 +1,102 @@
-services:
-  - type: web
-    name: vpn
-    env: python
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn config.wsgi:application"
-    plan: free
-    branch: master
-    envVars:
-      - key: DEBUG
-        value: "False"
-      - key: SECRET_KEY
-        value: "ko1kagnqiksg2h5a78b-1t*6kpm(lf5grsn35wqdn3@#3z0=tw"
+{
+  "log": {
+    "loglevel": "warning",
+    "access": "/var/log/xray/access.log",
+    "error": "/var/log/xray/error.log"
+  },
+  "inbounds": [
+    {
+      "port": 80,
+      "protocol": "vless",
+      "settings": {
+        "clients": [
+          {
+            "id": "74b741f9-ea44-4f16-8599-90bcc31ae3cc",
+            "level": 0,
+            "email": "74b741f9-ea44-4f16-8599-90bcc31ae3cc"
+          }
+        ],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "none",
+        "wsSettings": {
+          "path": "/vless",
+          "host": "31.97.49.153"
+        }
+      },
+      "tag": "vless-in",
+      "sniffing": {
+        "enabled": true,
+        "destOverride": [
+          "http",
+          "tls"
+        ]
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "protocol": "http",
+      "settings": {
+        "servers": [
+          {
+            "address": "127.0.0.1",
+            "port": 8888,
+            "users": [
+              {
+                "user": "74b741f9-ea44-4f16-8599-90bcc31ae3cc",
+                "pass": "x",
+                "auth": "basic"
+              }
+            ]
+          }
+        ]
+      },
+      "tag": "user-74b741"
+    }
+  ],
+  "routing": {
+    "domainStrategy": "AsIs",
+    "rules": [
+      {
+        "type": "field",
+        "inboundTag": [
+          "vless-in"
+        ],
+        "email": "74b741f9-ea44-4f16-8599-90bcc31ae3cc",
+        "outboundTag": "user-74b741"
+      }
+    ]
+  }
+}
+
+
+
+
+
+
+http_port 127.0.0.1:8888
+
+# аутентификация
+auth_param basic program /usr/lib/squid/basic_ncsa_auth /etc/squid/passwd
+auth_param basic children 5
+auth_param basic realm Squid proxy
+auth_param basic credentialsttl 2 hours
+auth_param basic casesensitive on
+
+# acl на основе логина
+acl localnet src 127.0.0.1
+acl authenticated proxy_auth REQUIRED
+
+http_access allow localnet authenticated
+http_access deny all
+
+logformat mailformat %ts.%03tu %>a %un %rm %ru %>Hs
+access_log /var/log/squid/access.log mailformat
+
+cache_log /var/log/squid/cache.log
+
+via off
+forwarded_for delete
