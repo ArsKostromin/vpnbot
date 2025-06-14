@@ -14,6 +14,10 @@ def extend_subscription(subscription, plan):
 
 def get_least_loaded_server():
     servers = VPNServer.objects.filter(is_active=True)
+
+    if not servers.exists():
+        return None  # Совсем нет серверов, даже fallback не поможет
+
     min_count = float('inf')
     selected = None
 
@@ -21,12 +25,15 @@ def get_least_loaded_server():
         try:
             r = requests.get(f"{server.api_url}/stats", timeout=5)
             count = r.json().get("user_count", 9999)
-            if count < min_count:
-                selected, min_count = server, count
-        except:
-            continue
+        except Exception as e:
+            count = 9999  # Если не ответил — считаем перегруженным
 
-    return selected
+        if count < min_count:
+            selected, min_count = server, count
+
+    # Если все обосрались и selected всё ещё None — берём любой
+    return selected or servers.first()
+
 
 
 def get_least_loaded_server_by_country(country: str):
