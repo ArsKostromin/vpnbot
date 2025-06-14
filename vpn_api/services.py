@@ -43,4 +43,12 @@ def get_least_loaded_server_by_country(country: str):
         except:
             continue
 
+    if selected is None:
+        # fallback
+        try:
+            fallback_server = VPNServer.objects.get(is_active=True, name="Indonesia")
+            return fallback_server
+        except VPNServer.DoesNotExist:
+            return None
+
     return selected
