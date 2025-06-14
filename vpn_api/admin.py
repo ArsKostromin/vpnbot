@@ -14,7 +14,7 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
 class SubscriptionAdmin(admin.ModelAdmin):
     list_display = (
         'user', 'plan', 'is_active', 'start_date', 'end_date',
-        'auto_renew', 'paused', 'short_vless_link'
+        'auto_renew', 'paused', 'short_vless_link', 'uuid'  # <-- показываем UUID в списке
     )
     list_filter = ('is_active', 'auto_renew', 'paused')
     search_fields = (
@@ -23,8 +23,10 @@ class SubscriptionAdmin(admin.ModelAdmin):
         'plan__vpn_type',
         'plan__duration',
         'plan__price',
+        'uuid',  # <-- поиск по UUID
     )
-    readonly_fields = ('vless',)
+    readonly_fields = ('vless',)  # <-- UUID убираем отсюда
+
 
     def short_vless_link(self, obj):
         if obj.vless:

@@ -27,12 +27,12 @@ class ProxyLogReceiver(APIView):
         user = None
         if uuid_str and uuid_str != "unknown":
             try:
-                # Конвертируем в настоящий UUID (важно!)
                 uuid_obj = UUID(uuid_str)
                 subscription = Subscription.objects.get(uuid=uuid_obj)
                 user = subscription.user
-            except (ValueError, VPNUser.DoesNotExist):
-                pass
+            except (ValueError, Subscription.DoesNotExist, VPNUser.DoesNotExist):
+                user = None  # ← явно, чтобы не спалить нигде
+
 
         # Парсим статус и байты, если лог похож на Squid
         status_code = None
