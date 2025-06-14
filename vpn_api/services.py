@@ -30,25 +30,11 @@ def get_least_loaded_server():
 
 
 def get_least_loaded_server_by_country(country: str):
-    servers = VPNServer.objects.filter(is_active=True, country=country)
-    min_count = float('inf')
-    selected = None
+    # Сначала пытаемся найти по стране
+    server = VPNServer.objects.filter(is_active=True, country=country).first()
+    
+    if server:
+        return server
 
-    for server in servers:
-        try:
-            r = requests.get(f"{server.api_url}/stats", timeout=5)
-            count = r.json().get("user_count", 9999)
-            if count < min_count:
-                selected, min_count = server, count
-        except:
-            continue
-
-    if selected is None:
-        # fallback
-        try:
-            fallback_server = VPNServer.objects.get(is_active=True, name="Indonesia")
-            return fallback_server
-        except VPNServer.DoesNotExist:
-            return None
-
-    return selected
+    # Если не нашли — берём любой активный
+    return VPNServer.objects.filter(is_active=True).first()
