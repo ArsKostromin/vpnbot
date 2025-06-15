@@ -4,8 +4,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework import status
-from .serializers import BuySubscriptionSerializer, SubscriptionPlanSerializer
-from .models import Subscription, SubscriptionPlan
+from .serializers import BuySubscriptionSerializer, SubscriptionPlanSerializer, СountriesSerializer
+from .models import Subscription, SubscriptionPlan, VPNServer
 from user.models import VPNUser
 from django.utils import timezone
 import uuid
@@ -144,4 +144,13 @@ class SubscriptionPlanListView(APIView):
     def get(self, request):
         plans = SubscriptionPlan.objects.all()
         serializer = SubscriptionPlanSerializer(plans, many=True)
+        return Response(serializer.data)
+
+
+class CountriesPlanListView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        countries = VPNServer.objects.filter(is_active=True)
+        serializer = СountriesSerializer(countries, many=True)
         return Response(serializer.data)

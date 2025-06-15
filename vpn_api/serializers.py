@@ -1,6 +1,6 @@
 ### serializers.py
 from rest_framework import serializers
-from .models import Subscription, SubscriptionPlan
+from .models import VPNServer, Subscription, SubscriptionPlan
 
 class SubscriptionPlanSerializer(serializers.ModelSerializer):
     vpn_type_display = serializers.SerializerMethodField()
@@ -57,3 +57,11 @@ class BuySubscriptionSerializer(serializers.Serializer):
 
         return attrs
 
+
+class СountriesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VPNServer
+        fields = [
+            'country',
+            'name',
+        ]
