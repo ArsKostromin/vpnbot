@@ -23,7 +23,7 @@ def get_least_loaded_server():
 
     for server in servers:
         try:
-            r = requests.get(f"{server.api_url}/stats", timeout=5)
+            r = requests.get(f"{server.api_url}/count", timeout=5)
             count = r.json().get("user_count", 9999)
         except Exception as e:
             count = 9999  # Если не ответил — считаем перегруженным
@@ -33,7 +33,6 @@ def get_least_loaded_server():
 
     # Если все обосрались и selected всё ещё None — берём любой
     return selected or servers.first()
-
 
 
 def get_least_loaded_server_by_country(country: str):
