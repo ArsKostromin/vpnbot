@@ -43,9 +43,11 @@ class BuySubscriptionView(APIView):
         price = plan.get_current_price()
         logger.debug(f"Цена плана (со скидкой если есть): {price}")
 
-        # Проверка на активную подписку того же типа
-        active_subscriptions = user.subscriptions.filter(is_active=True, end_date__gt=timezone.now())
-        same_type_sub = active_subscriptions.filter(plan__vpn_type=plan.vpn_type).first()
+        # Проверка на активную подписку того же типа (только если не country)
+        same_type_sub = None
+        if plan.vpn_type != "country":
+            active_subscriptions = user.subscriptions.filter(is_active=True, end_date__gt=timezone.now())
+            same_type_sub = active_subscriptions.filter(plan__vpn_type=plan.vpn_type).first()
 
         if same_type_sub:
             logger.debug("Найдена активная подписка такого же типа, продлеваем...")
