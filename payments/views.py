@@ -205,6 +205,10 @@ def crypto_webhook(request):
     try:
         logger.info(f"[crypto_webhook] Headers: {dict(request.headers)}")
         logger.info(f"[crypto_webhook] Raw body: {request.body}")
+        logger.info(f"[crypto_webhook] 📩 Получен вебхук: {request.body.decode('utf-8')}")  # <--- ДОБАВЛЕНО
+
+        has_sign = "sign" in request.headers
+        logger.info(f"[crypto_webhook] 🔍 'sign' in headers? {has_sign}")
 
         # ⬇️ Логируем наличие sign в заголовках
         has_sign = "sign" in request.headers
