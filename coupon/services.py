@@ -17,7 +17,7 @@ def apply_coupon_to_user(user, code, request=None):
     if coupon.is_used:
         return {"data": {"detail": "Промокод уже использован."}, "status": status.HTTP_400_BAD_REQUEST}
 
-    if coupon.expiration_date < timezone.now():
+    if coupon.expiration_date and coupon.expiration_date < timezone.now():
         return {"data": {"detail": "Срок действия промокода истёк."}, "status": status.HTTP_400_BAD_REQUEST}
 
     if coupon.type == "balance":
@@ -38,7 +38,7 @@ def apply_coupon_to_user(user, code, request=None):
 
     elif coupon.type == "subscription":
         if not coupon.vpn_type or not coupon.duration:
-            return {"data": {"detail": "Промокод некорректно настроен (не указан vpn_type или duration)."}, "status": status.HTTP_400_BAD_REQUEST}
+            return {"data": {"detail": "Промокод некорректно настроен: vpn_type или duration не указаны."}, "status": status.HTTP_400_BAD_REQUEST}
 
         plan = SubscriptionPlan.objects.filter(
             vpn_type=coupon.vpn_type,
@@ -46,28 +46,21 @@ def apply_coupon_to_user(user, code, request=None):
         ).first()
 
         if not plan:
-            return {
-                "data": {"detail": "Не удалось найти подходящий тарифный план."},
-                "status": status.HTTP_400_BAD_REQUEST,
-            }
+            return {"data": {"detail": "Не найден подходящий тариф."}, "status": status.HTTP_400_BAD_REQUEST}
 
+        # Выбор сервера
         if plan.vpn_type == "country":
             country = request.data.get("country") if request else None
             if not country:
-                return {
-                    "data": {"detail": "Для этого промокода необходимо указать страну."},
-                    "status": status.HTTP_400_BAD_REQUEST,
-                }
+                return {"data": {"detail": "Укажите страну для активации промокода."}, "status": status.HTTP_400_BAD_REQUEST}
             server = get_least_loaded_server_by_country(country)
         else:
             server = get_least_loaded_server()
 
         if not server:
-            return {
-                "data": {"detail": "Нет доступных серверов VPN."},
-                "status": status.HTTP_503_SERVICE_UNAVAILABLE,
-            }
+            return {"data": {"detail": "Нет доступных VPN-серверов."}, "status": status.HTTP_503_SERVICE_UNAVAILABLE}
 
+        # Создаём подписку
         subscription = Subscription.objects.create(user=user, plan=plan, server=server)
 
         try:
@@ -75,14 +68,14 @@ def apply_coupon_to_user(user, code, request=None):
         except Exception as e:
             subscription.delete()
             return {
-                "data": {"detail": f"Ошибка при создании VLESS-конфига: {str(e)}"},
+                "data": {"detail": f"Ошибка при генерации VLESS: {str(e)}"},
                 "status": status.HTTP_500_INTERNAL_SERVER_ERROR,
             }
 
         if not vless_result.get("success"):
             subscription.delete()
             return {
-                "data": {"detail": "VLESS не был создан. Попробуйте позже."},
+                "data": {"detail": "Не удалось создать VLESS-конфиг. Повторите позже."},
                 "status": status.HTTP_500_INTERNAL_SERVER_ERROR,
             }
 
@@ -99,6 +92,7 @@ def apply_coupon_to_user(user, code, request=None):
         }
 
     return {"data": {"detail": "Неверный тип промокода."}, "status": status.HTTP_400_BAD_REQUEST}
+
 
 def generate_coupon_for_user(user):
     code = f"VPN-{uuid.uuid4().hex[:6].upper()}"
