@@ -1,6 +1,13 @@
 # vpn_api/admin.py
 from django.contrib import admin
 from .models import SubscriptionPlan, Subscription, VPNServer
+from django_celery_beat.models import (
+    PeriodicTask, IntervalSchedule, CrontabSchedule,
+    SolarSchedule, ClockedSchedule
+)
+
+# Импорт функции генерации VLESS
+from vpn_api.services.vless import generate_vless_for_subscription
 
 @admin.register(SubscriptionPlan)
 class SubscriptionPlanAdmin(admin.ModelAdmin):
@@ -9,12 +16,26 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
     search_fields = ('vpn_type',)
     readonly_fields = ('discount_price',)
     exclude = ('discount_text',)
-    
+
+
+# @admin.action(description="Сгенерировать VLESS для выбранных подписок")
+# def generate_vless_action(modeladmin, request, queryset):
+#     for sub in queryset:
+#         if not sub.vless:
+#             try:
+#                 server = get_least_loaded_server()
+#                 vless_result = create_vless(server, user_uuid)
+#                 sub добавить vless_result
+#                 sub.save()
+#             except Exception as e:
+#                 modeladmin.message_user(request, f"Ошибка для {sub.id}: {str(e)}", level='error')
+
+
 @admin.register(Subscription)
 class SubscriptionAdmin(admin.ModelAdmin):
     list_display = (
         'user', 'plan', 'is_active', 'start_date', 'end_date',
-        'auto_renew', 'paused', 'short_vless_link', 'uuid'  # <-- показываем UUID в списке
+        'auto_renew', 'paused', 'short_vless_link', 'uuid'
     )
     list_filter = ('is_active', 'auto_renew', 'paused')
     search_fields = (
@@ -23,10 +44,10 @@ class SubscriptionAdmin(admin.ModelAdmin):
         'plan__vpn_type',
         'plan__duration',
         'plan__price',
-        'uuid',  # <-- поиск по UUID
+        'uuid',
     )
-    readonly_fields = ('vless',)  # <-- UUID убираем отсюда
-
+    readonly_fields = ('vless',)
+    actions = [generate_vless_action]
 
     def short_vless_link(self, obj):
         if obj.vless:
@@ -34,10 +55,6 @@ class SubscriptionAdmin(admin.ModelAdmin):
         return "-"
     short_vless_link.short_description = "VLESS"
 
-from django_celery_beat.models import (
-    PeriodicTask, IntervalSchedule, CrontabSchedule,
-    SolarSchedule, ClockedSchedule
-)
 
 @admin.register(VPNServer)
 class VPNServerAdmin(admin.ModelAdmin):

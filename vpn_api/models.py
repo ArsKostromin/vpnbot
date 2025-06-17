@@ -5,6 +5,8 @@ from user.models import VPNUser
 import uuid
 from django.conf import settings
 import urllib.parse
+from .services import get_least_loaded_server
+from .utils import create_vless
 
 class SubscriptionPlan(models.Model):
     VPN_TYPES = [
@@ -78,6 +80,7 @@ class Subscription(models.Model):
             raise ValueError(f"Unknown plan duration: {self.plan.duration}")
         return self.start_date + duration
 
+
     def save(self, *args, **kwargs):
         if not self.end_date:
             self.end_date = self.calculate_end_date()
@@ -85,11 +88,20 @@ class Subscription(models.Model):
         if self.end_date and self.end_date < timezone.now():
             self.is_active = False
 
+        # Генерация VLESS при первом сохранении
+        if not self.vless:
+            if not self.uuid:
+                self.uuid = uuid.uuid4()
+
+            if self.plan.vpn_type != 'country':
+                try:
+                    server = get_least_loaded_server()
+                    self.vless = create_vless(server, str(self.uuid))
+                except Exception as e:
+                    print(f"Ошибка при генерации VLESS: {e}")
+
         super().save(*args, **kwargs)
 
-    class Meta:
-        verbose_name_plural = 'Подписки'
-        verbose_name = 'Подписку'
 
 
 class VPNServer(models.Model):
