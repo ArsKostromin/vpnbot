@@ -6,6 +6,7 @@ from vpn_api.models import SubscriptionPlan, Subscription
 from .models import Coupon
 from vpn_api.utils import create_vless
 from vpn_api.services import extend_subscription, get_duration_delta, get_least_loaded_server, get_least_loaded_server_by_country
+from uuid import uuid4
 
 
 def apply_coupon_to_user(user, code, request=None):
@@ -20,6 +21,7 @@ def apply_coupon_to_user(user, code, request=None):
     if coupon.expiration_date and coupon.expiration_date < timezone.now():
         return {"data": {"detail": "Срок действия промокода истёк."}, "status": status.HTTP_400_BAD_REQUEST}
 
+    # Промокод на пополнение баланса
     if coupon.type == "balance":
         if not coupon.discount_amount:
             return {"data": {"detail": "У промокода не указана сумма пополнения."}, "status": status.HTTP_400_BAD_REQUEST}
@@ -36,6 +38,7 @@ def apply_coupon_to_user(user, code, request=None):
             "status": status.HTTP_200_OK,
         }
 
+    # Промокод на подписку
     elif coupon.type == "subscription":
         if not coupon.vpn_type or not coupon.duration:
             return {"data": {"detail": "Промокод некорректно настроен: vpn_type или duration не указаны."}, "status": status.HTTP_400_BAD_REQUEST}
@@ -48,7 +51,7 @@ def apply_coupon_to_user(user, code, request=None):
         if not plan:
             return {"data": {"detail": "Не найден подходящий тариф."}, "status": status.HTTP_400_BAD_REQUEST}
 
-        # Выбор сервера
+        # Определяем сервер
         if plan.vpn_type == "country":
             country = request.data.get("country") if request else None
             if not country:
@@ -60,35 +63,49 @@ def apply_coupon_to_user(user, code, request=None):
         if not server:
             return {"data": {"detail": "Нет доступных VPN-серверов."}, "status": status.HTTP_503_SERVICE_UNAVAILABLE}
 
-        # Создаём подписку
-        subscription = Subscription.objects.create(user=user, plan=plan)
+        # Генерация UUID
+        user_uuid = uuid4()
 
-        try:
-            vless_result = create_vless(server, str(subscription.uuid))
-        except Exception as e:
-            subscription.delete()
-            return {
-                "data": {"detail": f"Ошибка при генерации VLESS: {str(e)}"},
-                "status": status.HTTP_500_INTERNAL_SERVER_ERROR,
-            }
+        # Создание VLESS
+        vless_result = create_vless(server, user_uuid)
 
         if not vless_result.get("success"):
-            subscription.delete()
             return {
-                "data": {"detail": "Не удалось создать VLESS-конфиг. Повторите позже."},
+                "data": {"detail": "Ошибка при создании VLESS-конфига."},
                 "status": status.HTTP_500_INTERNAL_SERVER_ERROR,
             }
 
-        # Сохраняем VLESS в подписку
-        subscription.vless = vless_result["vless_link"]
-        subscription.save(update_fields=["vless"])
+        # Вычисление дат
+        delta = get_duration_delta(plan.duration)
+        if not delta:
+            return {"data": {"detail": "Неизвестная длительность подписки."}, "status": status.HTTP_500_INTERNAL_SERVER_ERROR}
+
+        start_date = timezone.now()
+        end_date = start_date + delta
+
+        # Создание подписки
+        subscription = Subscription.objects.create(
+            user=user,
+            plan=plan,
+            start_date=start_date,
+            end_date=end_date,
+            vless=vless_result["vless_link"],
+            uuid=user_uuid
+        )
 
         coupon.is_used = True
         coupon.used_by = user
         coupon.save(update_fields=["is_used", "used_by"])
 
         return {
-            "data": {"detail": f"Промо-подписка «{plan}» активирована."},
+            "data": {
+                "detail": f"Промо-подписка «{plan}» активирована.",
+                "subscription_id": subscription.id,
+                "start_date": subscription.start_date,
+                "end_date": subscription.end_date,
+                "vless": subscription.vless,
+                "uuid": str(subscription.uuid)
+            },
             "status": status.HTTP_200_OK,
         }
 
