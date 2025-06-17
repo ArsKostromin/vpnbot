@@ -199,37 +199,60 @@ logger = logging.getLogger(__name__)
 
 @csrf_exempt
 def crypto_webhook(request):
+    logger.warning("🟡 [crypto_webhook] Вызов обработчика")
+
     if request.method != "POST":
+        logger.warning("🔴 [crypto_webhook] Метод не POST")
         return JsonResponse({"error": "Only POST allowed"}, status=405)
 
     try:
-        logger.info(f"[crypto_webhook] Headers: {dict(request.headers)}")
-        logger.info(f"[crypto_webhook] Raw body: {request.body}")
-        logger.info(f"[crypto_webhook] 📩 Получен вебхук: {request.body.decode('utf-8')}")  # <--- ДОБАВЛЕНО
+        # 🔍 Базовая отладка
+        logger.info(f"📨 Method: {request.method}")
+        logger.info(f"📨 Content-Type: {request.headers.get('Content-Type')}")
+        logger.info(f"📨 Headers: {dict(request.headers)}")
+        logger.info(f"📨 request.GET: {dict(request.GET)}")
+        logger.info(f"📨 request.POST: {dict(request.POST)}")
+        logger.info(f"📨 request.META: {dict(request.META)}")
 
+        # 🔍 Raw тело запроса
+        raw_body = request.body
+        raw_text = raw_body.decode("utf-8", errors="replace")
+        logger.info(f"📦 Raw body (bytes): {raw_body}")
+        logger.info(f"📦 Raw body (text): {raw_text}")
+
+        # 🔍 Сигнатура
         has_sign = "sign" in request.headers
-        logger.info(f"[crypto_webhook] 🔍 'sign' in headers? {has_sign}")
+        logger.info(f"🔐 'sign' in headers? {has_sign}")
 
-        # ⬇️ Логируем наличие sign в заголовках
-        has_sign = "sign" in request.headers
-        logger.info(f"[crypto_webhook] 🔍 'sign' in headers? {has_sign}")
-
-        payload = json.loads(request.body.decode("utf-8"))
+        # 🔍 Преобразование тела в JSON
+        try:
+            payload = json.loads(raw_text)
+            logger.info(f"✅ JSON payload: {payload}")
+        except Exception as json_err:
+            logger.error(f"❌ Ошибка при разборе JSON: {json_err}")
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
 
         status = payload.get("status")
         order_id = payload.get("order_id")
         amount = payload.get("amount")
         currency = payload.get("currency")
 
+        logger.info(f"💰 Статус: {status}, Order ID: {order_id}, Amount: {amount}, Currency: {currency}")
+
         if status != "paid":
+            logger.info(f"ℹ️ Платёж не завершён: {status}")
             return JsonResponse({"ok": True})
 
+        # 🔍 Получаем пользователя
         try:
             _, telegram_id, _amount, *_ = order_id.split("_")
+            logger.info(f"👤 Извлечён telegram_id: {telegram_id}")
             user = VPNUser.objects.get(telegram_id=int(telegram_id))
-        except Exception:
+        except Exception as e:
+            logger.error(f"❌ Ошибка извлечения telegram_id из order_id: {e}")
             return JsonResponse({"error": "Invalid order_id"}, status=400)
 
+        # 🔍 Обработка платежа
         payment, created = Payment.objects.get_or_create(
             inv_id=generate_unique_inv_id(),
             defaults={
@@ -239,17 +262,21 @@ def crypto_webhook(request):
                 "status": Payment.Status.SUCCESS,
             }
         )
+        logger.info(f"💳 Платёж создан: {created}, объект: {payment}")
 
         if not created and payment.status == Payment.Status.SUCCESS:
+            logger.info("🔁 Платёж уже был обработан")
             return JsonResponse({"ok": True})
 
         payment.status = Payment.Status.SUCCESS
         payment.save()
+        logger.info("✅ Статус платежа обновлён")
 
         user.balance += Decimal(amount)
         user.save()
+        logger.info(f"💸 Баланс пользователя {user.telegram_id} обновлён: {user.balance}")
 
-        # ⬇️ Уведомление бота
+        # 🔔 Уведомление бота
         notify_payload = {
             "tg_id": user.telegram_id,
             "amount": float(amount),
@@ -257,21 +284,21 @@ def crypto_webhook(request):
         }
 
         try:
-            logger.info(f"[crypto_webhook] Отправляем POST-запрос боту: {notify_payload}")
+            logger.info(f"📤 Отправка уведомления боту: {notify_payload}")
             response = requests.post(
                 "http://vpn_bot:8081/notify",
                 json=notify_payload,
                 timeout=3
             )
             response.raise_for_status()
-            logger.info(f"[crypto_webhook] Бот ответил: {response.status_code} {response.text}")
+            logger.info(f"✅ Ответ от бота: {response.status_code} {response.text}")
         except Exception as e:
-            logger.error(f"[crypto_webhook] Ошибка при отправке уведомления в бота: {e}")
+            logger.error(f"❌ Ошибка при уведомлении бота: {e}")
 
         return JsonResponse({"ok": True})
 
     except Exception as e:
-        logger.exception("[crypto_webhook] Общая ошибка")
+        logger.exception("💥 Общая ошибка в обработке webhook")
         return JsonResponse({"error": str(e)}, status=500)
 
 
