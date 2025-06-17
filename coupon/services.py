@@ -32,7 +32,7 @@ def apply_coupon_to_user(user, code, request=None):
         coupon.save(update_fields=["is_used", "used_by"])
 
         return {
-            "data": {"detail": f"Баланс пополнен на {coupon.discount_amount}₽."},
+            "data": {"detail": f"Баланс пополнен на {coupon.discount_amount}$."},
             "status": status.HTTP_200_OK,
         }
 

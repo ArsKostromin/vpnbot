@@ -38,8 +38,8 @@ class SubscriptionPlan(models.Model):
 
     def get_display_price(self, with_discount=True):
         if self.discount_active and self.discount_price and with_discount:
-            return f"~{self.price}₽~ {self.discount_price}₽"
-        return f"{self.price}₽"
+            return f"~{self.price}$~ {self.discount_price}$"
+        return f"{self.price}$"
 
     def save(self, *args, **kwargs):
         if self.discount_active and self.discount_percent > 0:
