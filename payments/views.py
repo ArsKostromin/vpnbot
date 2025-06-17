@@ -201,18 +201,21 @@ logger = logging.getLogger(__name__)
 def crypto_webhook(request):
     logger.warning("🟡 [crypto_webhook] Вызов обработчика")
 
+    logger.info(f"📨 Method: {request.method}")
+    logger.info(f"📨 Content-Type: {request.headers.get('Content-Type')}")
+    logger.info(f"📨 Headers: {dict(request.headers)}")
+    logger.info(f"📨 request.GET: {dict(request.GET)}")
+    logger.info(f"📨 request.POST: {dict(request.POST)}")
+    logger.info(f"📨 request.META: {dict(request.META)}")
+
+
     if request.method != "POST":
         logger.warning("🔴 [crypto_webhook] Метод не POST")
         return JsonResponse({"error": "Only POST allowed"}, status=405)
 
     try:
         # 🔍 Базовая отладка
-        logger.info(f"📨 Method: {request.method}")
-        logger.info(f"📨 Content-Type: {request.headers.get('Content-Type')}")
-        logger.info(f"📨 Headers: {dict(request.headers)}")
-        logger.info(f"📨 request.GET: {dict(request.GET)}")
-        logger.info(f"📨 request.POST: {dict(request.POST)}")
-        logger.info(f"📨 request.META: {dict(request.META)}")
+
 
         # 🔍 Raw тело запроса
         raw_body = request.body
