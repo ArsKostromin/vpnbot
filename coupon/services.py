@@ -61,7 +61,7 @@ def apply_coupon_to_user(user, code, request=None):
             return {"data": {"detail": "Нет доступных VPN-серверов."}, "status": status.HTTP_503_SERVICE_UNAVAILABLE}
 
         # Создаём подписку
-        subscription = Subscription.objects.create(user=user, plan=plan, server=server)
+        subscription = Subscription.objects.create(user=user, plan=plan)
 
         try:
             vless_result = create_vless(server, str(subscription.uuid))
@@ -79,6 +79,7 @@ def apply_coupon_to_user(user, code, request=None):
                 "status": status.HTTP_500_INTERNAL_SERVER_ERROR,
             }
 
+        # Сохраняем VLESS в подписку
         subscription.vless = vless_result["vless_link"]
         subscription.save(update_fields=["vless"])
 
@@ -90,8 +91,6 @@ def apply_coupon_to_user(user, code, request=None):
             "data": {"detail": f"Промо-подписка «{plan}» активирована."},
             "status": status.HTTP_200_OK,
         }
-
-    return {"data": {"detail": "Неверный тип промокода."}, "status": status.HTTP_400_BAD_REQUEST}
 
 
 def generate_coupon_for_user(user):
