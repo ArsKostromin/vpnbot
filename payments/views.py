@@ -200,13 +200,12 @@ logger = logging.getLogger(__name__)
 @csrf_exempt
 def crypto_webhook(request):
     logger.warning("🟡 [crypto_webhook] Вызов обработчика")
-    print('хуййййййййййййййййййййййййййййййййййййййййййййййййй')
-    logger.info(f"📨 Method: {request.method}")
-    logger.info(f"📨 Content-Type: {request.headers.get('Content-Type')}")
-    logger.info(f"📨 Headers: {dict(request.headers)}")
-    logger.info(f"📨 request.GET: {dict(request.GET)}")
-    logger.info(f"📨 request.POST: {dict(request.POST)}")
-    logger.info(f"📨 request.META: {dict(request.META)}")
+    logger.warning(f"📨 Method: {request.method}")
+    logger.warning(f"📨 Content-Type: {request.headers.get('Content-Type')}")
+    logger.warning(f"📨 Headers: {dict(request.headers)}")
+    logger.warning(f"📨 request.GET: {dict(request.GET)}")
+    logger.warning(f"📨 request.POST: {dict(request.POST)}")
+    logger.warning(f"📨 request.META: {dict(request.META)}")
 
 
     if request.method != "POST":
