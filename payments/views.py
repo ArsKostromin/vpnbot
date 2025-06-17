@@ -227,7 +227,7 @@ def crypto_webhook(request):
             return JsonResponse({"error": "Invalid order_id"}, status=400)
 
         payment, created = Payment.objects.get_or_create(
-            inv_id=payload.get("uuid"),
+            inv_id=generate_unique_inv_id(),
             defaults={
                 "user": user,
                 "amount": Decimal(amount),
