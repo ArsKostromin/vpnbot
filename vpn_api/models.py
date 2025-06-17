@@ -92,16 +92,16 @@ class Subscription(models.Model):
             if not self.uuid:
                 self.uuid = uuid.uuid4()
 
-            if self.plan.vpn_type != 'country':
-                try:
-                    # ВАЖНО: импортим тут, чтобы не ловить circular import
-                    from vpn_api.services import get_least_loaded_server
-                    from vpn_api.utils import create_vless
+            try:
+                # ВАЖНО: импортим тут, чтобы не ловить circular import
+                from vpn_api.services import get_least_loaded_server
+                from vpn_api.utils import create_vless
 
-                    server = get_least_loaded_server()
-                    self.vless = create_vless(server, str(self.uuid))
-                except Exception as e:
-                    print(f"Ошибка при генерации VLESS: {e}")
+                server = get_least_loaded_server()
+                vless_result = create_vless(server, str(self.uuid))
+                self.vless = vless_result["vless_link"] 
+            except Exception as e:
+                print(f"Ошибка при генерации VLESS: {e}")
 
         super().save(*args, **kwargs)
 
