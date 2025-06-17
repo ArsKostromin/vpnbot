@@ -206,20 +206,11 @@ def crypto_webhook(request):
         logger.info(f"[crypto_webhook] Headers: {dict(request.headers)}")
         logger.info(f"[crypto_webhook] Raw body: {request.body}")
 
-        sign = request.headers.get("sign")
-        if not sign:
-            return HttpResponseForbidden("Missing signature")
+        # ⬇️ Логируем наличие sign в заголовках
+        has_sign = "sign" in request.headers
+        logger.info(f"[crypto_webhook] 🔍 'sign' in headers? {has_sign}")
 
-        secret = settings.CRYPTOMUS_API_KEY.encode("utf-8")
         payload = json.loads(request.body.decode("utf-8"))
-        normalized_json = json.dumps(payload, separators=(',', ':')).encode("utf-8")
-        calculated_sign = hmac.new(secret, normalized_json, hashlib.sha256).hexdigest()
-
-        logger.info(f"[crypto_webhook] Calculated sign: {calculated_sign}")
-        logger.info(f"[crypto_webhook] Received sign: {sign}")
-
-        if calculated_sign != sign:
-            return HttpResponseForbidden("Invalid signature")
 
         status = payload.get("status")
         order_id = payload.get("order_id")

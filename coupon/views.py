@@ -35,7 +35,6 @@ class ApplyCouponView(APIView):
         return Response(response_data, status=result["status"])
 
 
-
 @api_view(['POST'])
 def generate_promo_code(request):
     telegram_id = request.data.get("telegram_id")
