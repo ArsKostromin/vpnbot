@@ -6,8 +6,6 @@ from django_celery_beat.models import (
     SolarSchedule, ClockedSchedule
 )
 
-# Импорт функции генерации VLESS
-from vpn_api.services.vless import generate_vless_for_subscription
 
 @admin.register(SubscriptionPlan)
 class SubscriptionPlanAdmin(admin.ModelAdmin):
