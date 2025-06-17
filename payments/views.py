@@ -221,7 +221,7 @@ def crypto_webhook(request):
 
         logger.warning(f"💰 Статус: {status}, Order ID: {order_id}, Amount: {amount}, Currency: {currency}")
 
-        if status != "paid":
+        if status not in ("paid", "paid_over"):
             logger.warning("ℹ️ Статус не 'paid', игнорим")
             return JsonResponse({"ok": True})
 
