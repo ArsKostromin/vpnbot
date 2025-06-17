@@ -44,37 +44,19 @@ class BuySubscriptionView(APIView):
         logger.debug(f"Цена плана (со скидкой если есть): {price}")
 
         # Проверка на активную подписку того же типа (только если не country)
-        same_type_sub = None
         if plan.vpn_type != "country":
             active_subscriptions = user.subscriptions.filter(is_active=True, end_date__gt=timezone.now())
             same_type_sub = active_subscriptions.filter(plan__vpn_type=plan.vpn_type).first()
-
-        if same_type_sub:
-            logger.debug("Найдена активная подписка такого же типа, продлеваем...")
-
-            if user.balance < price:
-                logger.warning("Недостаточно средств для продления подписки")
-                return Response({"error": "Недостаточно средств"}, status=402)
-
-            try:
-                extend_subscription(same_type_sub, plan)
-                logger.debug("Подписка продлена успешно")
-            except ValueError as e:
-                logger.error(f"Ошибка продления: {str(e)}")
-                return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-            user.balance -= price
-            user.save()
-            logger.debug(f"Баланс после списания: {user.balance}")
-
-            return Response({
-                "message": "Подписка успешно продлена",
-                "subscription_id": same_type_sub.id,
-                "start_date": same_type_sub.start_date,
-                "end_date": same_type_sub.end_date,
-                "vless": same_type_sub.vless,
-                "uuid": str(same_type_sub.uuid)
-            }, status=status.HTTP_200_OK)
+            if same_type_sub:
+                logger.debug("У пользователя уже есть активная подписка такого типа")
+                return Response({
+                    "error": "У вас уже есть активная подписка этого типа",
+                    "subscription_id": same_type_sub.id,
+                    "start_date": same_type_sub.start_date,
+                    "end_date": same_type_sub.end_date,
+                    "vless": same_type_sub.vless,
+                    "uuid": str(same_type_sub.uuid)
+                }, status=status.HTTP_409_CONFLICT)
 
         # Новая подписка
         if user.balance < price:
@@ -138,6 +120,7 @@ class BuySubscriptionView(APIView):
             "vless": subscription.vless,
             "uuid": str(subscription.uuid)
         }, status=status.HTTP_201_CREATED)
+
 
 
 class SubscriptionPlanListView(APIView):
