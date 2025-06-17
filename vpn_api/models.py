@@ -95,8 +95,8 @@ class Subscription(models.Model):
             if self.plan.vpn_type != 'country':
                 try:
                     # ВАЖНО: импортим тут, чтобы не ловить circular import
-                    from .services import get_least_loaded_server
-                    from .utils import create_vless
+                    from vpn_api.services import get_least_loaded_server
+                    from vpn_api.utils import create_vless
 
                     server = get_least_loaded_server()
                     self.vless = create_vless(server, str(self.uuid))
