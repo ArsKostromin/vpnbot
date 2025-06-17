@@ -200,7 +200,7 @@ logger = logging.getLogger(__name__)
 @csrf_exempt
 def crypto_webhook(request):
     logger.warning("🟡 [crypto_webhook] Вызов обработчика")
-
+    print('хуййййййййййййййййййййййййййййййййййййййййййййййййй')
     logger.info(f"📨 Method: {request.method}")
     logger.info(f"📨 Content-Type: {request.headers.get('Content-Type')}")
     logger.info(f"📨 Headers: {dict(request.headers)}")
