@@ -119,7 +119,7 @@ class Subscription(models.Model):
         super().save(*args, **kwargs)
         
     def delete(self, *args, **kwargs):
-        from vpn_api.services import delete_vless
+        from vpn_api.utils import delete_vless
 
         if self.server and self.uuid:
             success = delete_vless(self.server, str(self.uuid))
