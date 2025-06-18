@@ -9,6 +9,17 @@ from vpn_api.services import extend_subscription, get_duration_delta, get_least_
 from uuid import uuid4
 
 
+DURATION_DELTAS = {
+    "5d": timedelta(days=5),
+    "1m": timedelta(days=30),
+    "3m": timedelta(days=90),
+    "6m": timedelta(days=180),
+    "1y": timedelta(days=365),
+}
+
+def get_duration_delta(duration):
+    return DURATION_DELTAS.get(duration)
+
 def apply_coupon_to_user(user, code, request=None):
     try:
         coupon = Coupon.objects.get(code__iexact=code)
@@ -21,7 +32,7 @@ def apply_coupon_to_user(user, code, request=None):
     if coupon.expiration_date and coupon.expiration_date < timezone.now():
         return {"data": {"detail": "Срок действия промокода истёк."}, "status": status.HTTP_400_BAD_REQUEST}
 
-    # Промокод на пополнение баланса
+    # 🔹 Промокод на пополнение баланса
     if coupon.type == "balance":
         if not coupon.discount_amount:
             return {"data": {"detail": "У промокода не указана сумма пополнения."}, "status": status.HTTP_400_BAD_REQUEST}
@@ -38,21 +49,24 @@ def apply_coupon_to_user(user, code, request=None):
             "status": status.HTTP_200_OK,
         }
 
-    # Промокод на подписку
+    # 🔹 Промокод на подписку
     elif coupon.type == "subscription":
         if not coupon.vpn_type or not coupon.duration:
             return {"data": {"detail": "Промокод некорректно настроен: vpn_type или duration не указаны."}, "status": status.HTTP_400_BAD_REQUEST}
 
+        # Определяем план
         plan = SubscriptionPlan.objects.filter(
             vpn_type=coupon.vpn_type,
             duration=coupon.duration
         ).first()
 
-        # if not plan:
-        #     return {"data": {"detail": "Не найден подходящий тариф."}, "status": status.HTTP_400_BAD_REQUEST}
+        # Если нет подходящего тарифа — продолжим, но без плана (будем работать с купоном напрямую)
+        delta = get_duration_delta(coupon.duration)
+        if not delta:
+            return {"data": {"detail": "Неизвестная длительность подписки."}, "status": status.HTTP_400_BAD_REQUEST}
 
         # Определяем сервер
-        if plan.vpn_type == "country":
+        if coupon.vpn_type == "country":
             country = request.data.get("country") if request else None
             if not country:
                 return {"data": {"detail": "Укажите страну для активации промокода."}, "status": status.HTTP_400_BAD_REQUEST}
@@ -66,7 +80,7 @@ def apply_coupon_to_user(user, code, request=None):
         # Генерация UUID
         user_uuid = uuid4()
 
-        # Создание VLESS
+        # Создание VLESS-конфига
         vless_result = create_vless(server, user_uuid)
 
         if not vless_result.get("success"):
@@ -75,18 +89,13 @@ def apply_coupon_to_user(user, code, request=None):
                 "status": status.HTTP_500_INTERNAL_SERVER_ERROR,
             }
 
-        # Вычисление дат
-        delta = get_duration_delta(plan.duration)
-        if not delta:
-            return {"data": {"detail": "Неизвестная длительность подписки."}, "status": status.HTTP_500_INTERNAL_SERVER_ERROR}
-
         start_date = timezone.now()
         end_date = start_date + delta
 
         # Создание подписки
         subscription = Subscription.objects.create(
             user=user,
-            plan=plan,
+            plan=plan,  # может быть None — это ок
             start_date=start_date,
             end_date=end_date,
             vless=vless_result["vless_link"],
@@ -99,7 +108,7 @@ def apply_coupon_to_user(user, code, request=None):
 
         return {
             "data": {
-                "detail": f"Промо-подписка «{plan}» активирована.",
+                "detail": f"Промо-подписка активирована на {coupon.duration}.",
                 "subscription_id": subscription.id,
                 "start_date": subscription.start_date,
                 "end_date": subscription.end_date,
@@ -108,6 +117,9 @@ def apply_coupon_to_user(user, code, request=None):
             },
             "status": status.HTTP_200_OK,
         }
+
+    return {"data": {"detail": "Неизвестный тип промокода."}, "status": status.HTTP_400_BAD_REQUEST}
+
 
 
 def generate_coupon_for_user(user):
