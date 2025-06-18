@@ -60,7 +60,7 @@ class SubscriptionPlan(models.Model):
 
 class Subscription(models.Model):
     user = models.ForeignKey(VPNUser, on_delete=models.CASCADE, related_name='subscriptions', verbose_name='Пользователь')
-    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.CASCADE, verbose_name='План')
+    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.CASCADE, verbose_name='План', blank=True, null=True,)
     is_active = models.BooleanField(default=True, verbose_name='Активна')
     start_date = models.DateTimeField(default=timezone.now, verbose_name='Дата начала')
     end_date = models.DateTimeField(blank=True, null=True, verbose_name='Дата окончания')
@@ -68,6 +68,8 @@ class Subscription(models.Model):
     paused = models.BooleanField(default=False, verbose_name='Пауза')
     vless = models.TextField(blank=True, null=True, verbose_name='VLESS конфиг')
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, verbose_name="UUID", blank=True, null=True)
+    server = models.ForeignKey(VPNServer, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="VPN сервер")
+
 
     def calculate_end_date(self):
         duration_map = {
