@@ -7,7 +7,7 @@ from proxy_logs.models import ProxyLog
 class ProxyLogInline(admin.TabularInline):
     model = ProxyLog
     extra = 0
-    max_num = 80  # ← поставь лимит, например, 100 логов
+    max_num = 10  # ← поставь лимит, например, 100 логов
     fields = ("timestamp", "domain", "remote_ip")
     readonly_fields = ("timestamp", "domain", "remote_ip")
     can_delete = False
