@@ -46,3 +46,9 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
     def get_price(self, obj):
         return getattr(obj.plan, 'price', None)
+
+
+class UserInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VPNUser
+        fields = ('balance', 'link_code')
