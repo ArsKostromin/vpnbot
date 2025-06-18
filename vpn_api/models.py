@@ -117,3 +117,16 @@ class Subscription(models.Model):
                 print(f"Ошибка при генерации VLESS: {e}")
 
         super().save(*args, **kwargs)
+        
+    def delete(self, *args, **kwargs):
+        from vpn_api.services import delete_vless
+
+        if self.server and self.uuid:
+            try:
+                success = delete_vless(self.server, str(self.uuid))
+                if not success:
+                    print(f"[Subscription.delete] Не удалось удалить VLESS для UUID: {self.uuid}")
+            except Exception as e:
+                print(f"[Subscription.delete] Ошибка при удалении VLESS: {e}")
+
+        super().delete(*args, **kwargs)
