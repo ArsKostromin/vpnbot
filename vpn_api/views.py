@@ -105,6 +105,7 @@ class BuySubscriptionView(APIView):
             end_date=end_date,
             vless=vless_result["vless_link"],
             uuid=user_uuid
+            server=server
         )
         logger.info(f"Создана новая подписка: {subscription}")
 
