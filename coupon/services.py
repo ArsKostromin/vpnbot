@@ -48,8 +48,8 @@ def apply_coupon_to_user(user, code, request=None):
             duration=coupon.duration
         ).first()
 
-        if not plan:
-            return {"data": {"detail": "Не найден подходящий тариф."}, "status": status.HTTP_400_BAD_REQUEST}
+        # if not plan:
+        #     return {"data": {"detail": "Не найден подходящий тариф."}, "status": status.HTTP_400_BAD_REQUEST}
 
         # Определяем сервер
         if plan.vpn_type == "country":
