@@ -1,5 +1,8 @@
 from django.contrib import admin
 from django.utils.html import format_html, format_html_join
+from django.urls import reverse
+from django.utils.safestring import mark_safe
+
 from .models import VPNUser
 from proxy_logs.models import ProxyLog
 
@@ -7,30 +10,36 @@ from proxy_logs.models import ProxyLog
 class ProxyLogInline(admin.TabularInline):
     model = ProxyLog
     extra = 0
-    max_num = 10  # ← поставь лимит, например, 100 логов
     fields = ("timestamp", "domain", "remote_ip")
     readonly_fields = ("timestamp", "domain", "remote_ip")
     can_delete = False
     show_change_link = True
-    ordering = ('-timestamp',)
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.order_by('-timestamp')[:80]  # Ограничиваем реально
+
+    def get_max_num(self, request, obj=None, **kwargs):
+        return 80  # Просто для красоты
+
 
 @admin.register(VPNUser)
 class VPNUserAdmin(admin.ModelAdmin):
     list_display = (
         'id', 'telegram_id', 'balance', 'is_banned',
-        'created_at', 'referrals_list', 'subscriptions_list'  # ← добавлено
+        'created_at', 'referrals_list', 'subscriptions_list'
     )
     list_filter = ('is_banned', 'is_active', 'created_at')
     search_fields = ('email', 'telegram_id', 'current_ip', 'id')
     actions = ['ban_users', 'unban_users']
     inlines = [ProxyLogInline]
-    
+    readonly_fields = ['view_logs_link']
 
     def view_logs_link(self, obj):
         url = reverse("admin:proxy_logs_proxylog_changelist") + f"?user__id__exact={obj.id}"
-        return mark_safe(f"<a href='{url}' target='_blank'>Посмотреть логи</a>")
+        return mark_safe(f"<a href='{url}' target='_blank'>Посмотреть все логи</a>")
     view_logs_link.short_description = "Логи"
-    
+
     def ban_users(self, request, queryset):
         queryset.update(is_banned=True)
     ban_users.short_description = "Забанить выбранных пользователей"
@@ -44,7 +53,7 @@ class VPNUserAdmin(admin.ModelAdmin):
         if not referrals:
             return "-"
         return format_html_join(
-            '\n', "<div>{}</div>", 
+            '\n', "<div>{}</div>",
             ((f"{ref.telegram_id} / {ref.email or 'no email'}",) for ref in referrals)
         )
     referrals_list.short_description = "Рефералы"
