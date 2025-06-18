@@ -117,8 +117,8 @@ def generate_coupon_for_user(user):
         code=code,
         type='subscription',
         expiration_date=datetime.now() + timedelta(days=5),
-        vpn_type='solo',
-        duration='1m',
+        vpn_type='serfing',
+        duration='',
         is_used=False
     )
 
