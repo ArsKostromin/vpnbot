@@ -20,9 +20,9 @@ class RegisterUserSerializer(serializers.Serializer):
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
-    vpn_type = serializers.CharField(source='plan.vpn_type')
-    duration = serializers.CharField(source='plan.duration')
-    price = serializers.DecimalField(source='plan.price', max_digits=10, decimal_places=2)
+    vpn_type = serializers.SerializerMethodField()
+    duration = serializers.SerializerMethodField()
+    price = serializers.SerializerMethodField()
 
     class Meta:
         model = Subscription
@@ -38,8 +38,11 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             'vless',
         ]
 
+    def get_vpn_type(self, obj):
+        return getattr(obj.plan, 'vpn_type', None)
 
-class UserInfoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = VPNUser
-        fields = ('balance', 'link_code')
+    def get_duration(self, obj):
+        return getattr(obj.plan, 'duration', None)
+
+    def get_price(self, obj):
+        return getattr(obj.plan, 'price', None)
