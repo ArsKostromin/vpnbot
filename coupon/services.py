@@ -94,12 +94,11 @@ def apply_coupon_to_user(user, code, request=None):
 
         subscription = Subscription.objects.create(
             user=user,
-            plan=plan,  # может быть None
+            plan=plan,
             start_date=start_date,
             end_date=end_date,
             vless=vless_result["vless_link"],
             uuid=user_uuid,
-            duration=actual_duration  # <-- тут ты можешь добавить поле, если duration есть в модели Subscription
         )
 
         coupon.is_used = True
