@@ -55,7 +55,7 @@ def apply_coupon_to_user(user, code, request=None):
             return {"data": {"detail": "Промокод некорректно настроен: vpn_type или duration не указаны."}, "status": status.HTTP_400_BAD_REQUEST}
 
         # Костыль: если 5d, то подсовываем 1m как duration в подписку
-        actual_duration = '1m' if coupon.duration == '5d' else coupon.duration
+        actual_duration = '5d' if coupon.duration == '5d' else coupon.duration
         plan = SubscriptionPlan.objects.filter(
             vpn_type=coupon.vpn_type,
             duration=actual_duration
@@ -99,6 +99,7 @@ def apply_coupon_to_user(user, code, request=None):
             end_date=end_date,
             vless=vless_result["vless_link"],
             uuid=user_uuid,
+            server=server
         )
 
         coupon.is_used = True
