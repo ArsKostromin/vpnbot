@@ -25,7 +25,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
         'plan__price',
         'uuid',  # <-- поиск по UUID
     )
-    readonly_fields = ('vless', 'is_active')  # <-- UUID убираем отсюда
+    readonly_fields = ('vless', 'is_active', 'server')  # <-- UUID убираем отсюда
 
 
     def short_vless_link(self, obj):
