@@ -7,6 +7,17 @@ from django.conf import settings
 import urllib.parse
 
 
+class VPNServer(models.Model):
+    country = models.CharField(max_length=50, verbose_name="Страна")  # просто текстом, типа '🇺🇸 США'
+    name = models.CharField(max_length=100, verbose_name="Название (например, us1)")
+    domain = models.CharField(max_length=255, verbose_name="Домен (например, us1.anonixvpn.space)")
+    api_url = models.URLField(verbose_name="FastAPI URL (https://domain/api)")
+    is_active = models.BooleanField(default=True, verbose_name="Активен")
+
+    def __str__(self):
+        return f"{self.country} — {self.name}"
+
+
 class SubscriptionPlan(models.Model):
     VPN_TYPES = [
         ('socials', 'для соц.сетей'),
@@ -70,7 +81,6 @@ class Subscription(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, verbose_name="UUID", blank=True, null=True)
     server = models.ForeignKey(VPNServer, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="VPN сервер")
 
-
     def calculate_end_date(self):
         duration_map = {
             '1m': relativedelta(months=1),
@@ -107,14 +117,3 @@ class Subscription(models.Model):
                 print(f"Ошибка при генерации VLESS: {e}")
 
         super().save(*args, **kwargs)
-
-
-class VPNServer(models.Model):
-    country = models.CharField(max_length=50, verbose_name="Страна")  # просто текстом, типа '🇺🇸 США'
-    name = models.CharField(max_length=100, verbose_name="Название (например, us1)")
-    domain = models.CharField(max_length=255, verbose_name="Домен (например, us1.anonixvpn.space)")
-    api_url = models.URLField(verbose_name="FastAPI URL (https://domain/api)")
-    is_active = models.BooleanField(default=True, verbose_name="Активен")
-
-    def __str__(self):
-        return f"{self.country} — {self.name}"
