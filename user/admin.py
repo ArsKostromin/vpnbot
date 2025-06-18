@@ -7,6 +7,7 @@ from proxy_logs.models import ProxyLog
 class ProxyLogInline(admin.TabularInline):
     model = ProxyLog
     extra = 0
+    max_num = 80  # ← поставь лимит, например, 100 логов
     fields = ("timestamp", "domain", "remote_ip")
     readonly_fields = ("timestamp", "domain", "remote_ip")
     can_delete = False
@@ -23,6 +24,12 @@ class VPNUserAdmin(admin.ModelAdmin):
     search_fields = ('email', 'telegram_id', 'current_ip', 'id')
     actions = ['ban_users', 'unban_users']
     inlines = [ProxyLogInline]
+    
+
+    def view_logs_link(self, obj):
+        url = reverse("admin:proxy_logs_proxylog_changelist") + f"?user__id__exact={obj.id}"
+        return mark_safe(f"<a href='{url}' target='_blank'>Посмотреть логи</a>")
+    view_logs_link.short_description = "Логи"
     
     def ban_users(self, request, queryset):
         queryset.update(is_banned=True)
