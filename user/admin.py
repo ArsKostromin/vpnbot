@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.utils.html import format_html, format_html_join
+from django.utils.html import format_html_join
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
@@ -15,12 +15,15 @@ class ProxyLogInline(admin.TabularInline):
     can_delete = False
     show_change_link = True
 
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        return qs.order_by('-timestamp')[:80]  # Ограничиваем реально
+    def get_formset(self, request, obj=None, **kwargs):
+        formset = super().get_formset(request, obj, **kwargs)
 
-    def get_max_num(self, request, obj=None, **kwargs):
-        return 80  # Просто для красоты
+        class LimitedFormSet(formset):
+            def get_queryset(self, *args, **kwargs):
+                qs = super().get_queryset(*args, **kwargs)
+                return qs.order_by('-timestamp')[:80]  # ограничиваем тут безопасно
+
+        return LimitedFormSet
 
 
 @admin.register(VPNUser)
