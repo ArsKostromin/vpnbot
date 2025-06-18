@@ -54,13 +54,13 @@ def apply_coupon_to_user(user, code, request=None):
         if not coupon.vpn_type or not coupon.duration:
             return {"data": {"detail": "Промокод некорректно настроен: vpn_type или duration не указаны."}, "status": status.HTTP_400_BAD_REQUEST}
 
-        # Определяем план
+        # Костыль: если 5d, то подсовываем 1m как duration в подписку
+        actual_duration = '1m' if coupon.duration == '5d' else coupon.duration
         plan = SubscriptionPlan.objects.filter(
             vpn_type=coupon.vpn_type,
-            duration=coupon.duration
+            duration=actual_duration
         ).first()
 
-        # Если нет подходящего тарифа — продолжим, но без плана (будем работать с купоном напрямую)
         delta = get_duration_delta(coupon.duration)
         if not delta:
             return {"data": {"detail": "Неизвестная длительность подписки."}, "status": status.HTTP_400_BAD_REQUEST}
@@ -92,14 +92,14 @@ def apply_coupon_to_user(user, code, request=None):
         start_date = timezone.now()
         end_date = start_date + delta
 
-        # Создание подписки
         subscription = Subscription.objects.create(
             user=user,
-            plan=plan,  # может быть None — это ок
+            plan=plan,  # может быть None
             start_date=start_date,
             end_date=end_date,
             vless=vless_result["vless_link"],
-            uuid=user_uuid
+            uuid=user_uuid,
+            duration=actual_duration  # <-- тут ты можешь добавить поле, если duration есть в модели Subscription
         )
 
         coupon.is_used = True
@@ -121,7 +121,6 @@ def apply_coupon_to_user(user, code, request=None):
     return {"data": {"detail": "Неизвестный тип промокода."}, "status": status.HTTP_400_BAD_REQUEST}
 
 
-
 def generate_coupon_for_user(user):
     code = f"VPN-{uuid.uuid4().hex[:6].upper()}"
 
@@ -130,7 +129,7 @@ def generate_coupon_for_user(user):
         type='subscription',
         expiration_date=datetime.now() + timedelta(days=5),
         vpn_type='serfing',  
-        duration='1m',        
+        duration='5d',        
         is_used=False
     )
 
