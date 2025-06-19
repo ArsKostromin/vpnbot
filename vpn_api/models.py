@@ -12,10 +12,14 @@ class VPNServer(models.Model):
     name = models.CharField(max_length=100, verbose_name="Название (например, us1)")
     domain = models.CharField(max_length=255, verbose_name="Домен (например, us1.anonixvpn.space)")
     api_url = models.URLField(verbose_name="FastAPI URL (https://domain/api)")
-    is_active = models.BooleanField(default=True, verbose_name="Активен")
+    is_active = models.BooleanField(default=True, verbose_name="Активен") #убрать 
 
     def __str__(self):
         return f"{self.country} — {self.name}"
+
+    class Meta:
+        verbose_name_plural = 'Сервера'
+        verbose_name = 'Сервер'
 
 
 class SubscriptionPlan(models.Model):
@@ -127,3 +131,7 @@ class Subscription(models.Model):
                 raise RuntimeError(f"[Subscription.delete] Не удалось удалить VLESS для UUID: {self.uuid}")
 
         super().delete(*args, **kwargs)
+
+    class Meta:
+        verbose_name_plural = 'Подписки'
+        verbose_name = 'Подписка'
