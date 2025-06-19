@@ -62,6 +62,7 @@ def get_least_loaded_server_by_country(name: str):
     
     if server:
         return server
+    logger.warning("Нет активных серверов в базе: server=%s, name=%s", server, name)
 
     # Если не нашли — берём любой активный
     return VPNServer.objects.filter(is_active=True).first()
