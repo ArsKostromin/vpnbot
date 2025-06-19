@@ -34,7 +34,7 @@ class VPNUserAdmin(admin.ModelAdmin):
     )
     list_filter = ('is_banned', 'is_active', 'created_at')
     search_fields = ('email', 'telegram_id', 'current_ip', 'id')
-    actions = ['ban_users', 'unban_users']
+    actions = []
     inlines = [ProxyLogInline]
     readonly_fields = ['view_logs_link']
 
@@ -42,14 +42,6 @@ class VPNUserAdmin(admin.ModelAdmin):
         url = reverse("admin:proxy_logs_proxylog_changelist") + f"?user__id__exact={obj.id}"
         return mark_safe(f"<a href='{url}' target='_blank'>Посмотреть все логи</a>")
     view_logs_link.short_description = "Логи"
-
-    def ban_users(self, request, queryset):
-        queryset.update(is_banned=True)
-    ban_users.short_description = "Забанить выбранных пользователей"
-
-    def unban_users(self, request, queryset):
-        queryset.update(is_banned=False)
-    unban_users.short_description = "Разбанить выбранных пользователей"
 
     def referrals_list(self, obj):
         referrals = obj.referrals.all()
