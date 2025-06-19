@@ -71,9 +71,7 @@ class BuySubscriptionView(APIView):
             country = request.data.get("country")
             if not country:
                 return Response({"error": "Не указана страна"}, status=status.HTTP_400_BAD_REQUEST)
-            
-            name_country = VPNServer.objects.filter(is_active=True, country=country).values_list("name", flat=True).first()
-            server = get_least_loaded_server_by_country(name_country)
+            server = get_least_loaded_server_by_country(country)
         else:
             server = get_least_loaded_server()
 
