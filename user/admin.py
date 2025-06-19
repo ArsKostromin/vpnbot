@@ -32,12 +32,12 @@ class VPNUserAdmin(admin.ModelAdmin):
         'id', 'telegram_id', 'balance',
         'created_at', 'referrals_list', 'subscriptions_list'
     )
-    list_filter = ('is_active', 'created_at')
+    list_filter = ('created_at',)
     search_fields = ('email', 'telegram_id', 'current_ip', 'id')
     actions = []
     inlines = [ProxyLogInline]
     readonly_fields = ['view_logs_link']
-    exclude = ['is_banned']
+    exclude = ['is_banned', 'is_active']
 
     def view_logs_link(self, obj):
         url = reverse("admin:proxy_logs_proxylog_changelist") + f"?user__id__exact={obj.id}"
