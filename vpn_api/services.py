@@ -56,9 +56,9 @@ def get_least_loaded_server():
     return servers.first()
 
 
-def get_least_loaded_server_by_country(country: str):
+def get_least_loaded_server_by_country(name: str):
     # Сначала пытаемся найти по стране
-    server = VPNServer.objects.filter(is_active=True, country=country).first()
+    server = VPNServer.objects.filter(is_active=True, name=name).first()
     
     if server:
         return server
