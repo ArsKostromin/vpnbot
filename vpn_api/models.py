@@ -46,7 +46,6 @@ class SubscriptionPlan(models.Model):
     discount_active = models.BooleanField(default=False, verbose_name="Скидка активна")
     discount_percent = models.PositiveIntegerField(default=0, verbose_name="Скидка в %")
     discount_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Цена со скидкой")
-    discount_text = models.CharField(max_length=255, null=True, blank=True, verbose_name="Текст скидки (для отображения в боте)")
 
     def get_current_price(self):
         if self.discount_active and self.discount_price:
@@ -80,7 +79,6 @@ class Subscription(models.Model):
     start_date = models.DateTimeField(default=timezone.now, verbose_name='Дата начала')
     end_date = models.DateTimeField(blank=True, null=True, verbose_name='Дата окончания')
     auto_renew = models.BooleanField(default=True, verbose_name='Автопродление')
-    paused = models.BooleanField(default=False, verbose_name='Пауза')
     vless = models.TextField(blank=True, null=True, verbose_name='VLESS конфиг')
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, verbose_name="UUID", blank=True, null=True)
     server = models.ForeignKey(VPNServer, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="VPN сервер")

@@ -8,15 +8,14 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
     list_filter = ('vpn_type', 'duration', 'discount_active')
     search_fields = ('vpn_type',)
     readonly_fields = ('discount_price',)
-    exclude = ('discount_text',)
     
 @admin.register(Subscription)
 class SubscriptionAdmin(admin.ModelAdmin):
     list_display = (
         'user', 'plan', 'is_active', 'start_date', 'end_date',
-        'auto_renew', 'paused', 'short_vless_link', 'uuid'  # <-- показываем UUID в списке
+        'auto_renew', 'short_vless_link', 'uuid'  # <-- показываем UUID в списке
     )
-    list_filter = ('is_active', 'auto_renew', 'paused')
+    list_filter = ('is_active', 'auto_renew')
     search_fields = (
         'user__email',
         'user__telegram_id',

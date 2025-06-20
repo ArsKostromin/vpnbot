@@ -51,12 +51,9 @@ class VPNUser(AbstractBaseUser, PermissionsMixin):
 
     # Вспомогательные поля
     balance = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Баланс')  # Баланс пользователя в рублях
-    is_banned = models.BooleanField(default=False, verbose_name='Забанен')  # Заблокирован ли пользователь
-    is_active = models.BooleanField(default=True, verbose_name='Активен')  # Активен ли пользователь
     is_staff = models.BooleanField(default=False, verbose_name='Админ')  # Может ли пользователь зайти в админку
     date_joined = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания пользователя')  # Дата создания пользователя
     created_at = models.DateTimeField(default=timezone.now, verbose_name="Дата регистрации")  # Альтернативное поле даты
-    current_ip = models.GenericIPAddressField(blank=True, null=True, verbose_name='Ip')  # Текущий IP-адрес пользователя (если нужен)
     referred_by = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="referrals", verbose_name="Пригласивший")
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, verbose_name="UUID")
 
