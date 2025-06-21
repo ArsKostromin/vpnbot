@@ -4,6 +4,7 @@ from .models import SubscriptionPlan, Subscription, VPNServer
 
 @admin.register(SubscriptionPlan)
 class SubscriptionPlanAdmin(admin.ModelAdmin):
+    search_help_text = 'Поиск по типу VPN.'
     list_display = ('vpn_type', 'duration', 'price', 'discount_percent', 'discount_price', 'discount_active')
     list_filter = ('vpn_type', 'duration', 'discount_active')
     search_fields = ('vpn_type',)
@@ -11,6 +12,7 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
     
 @admin.register(Subscription)
 class SubscriptionAdmin(admin.ModelAdmin):
+    search_help_text = 'Поиск по email, Telegram ID, UUID, типу, длительности или цене тарифа.'
     list_display = (
         'user', 'plan', 'is_active', 'start_date', 'end_date',
         'auto_renew', 'short_vless_link', 'uuid'  # <-- показываем UUID в списке
@@ -35,6 +37,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
 
 @admin.register(VPNServer)
 class VPNServerAdmin(admin.ModelAdmin):
+    search_help_text = 'Поиск по названию, стране, домену или URL.'
     list_display = ('name', 'country', 'domain', 'api_url', 'is_active')
     list_filter = ('is_active', 'country')
     search_fields = ('name', 'country', 'domain', 'api_url')

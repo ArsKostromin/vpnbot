@@ -7,6 +7,7 @@ from .models import ProxyLog
 
 @admin.register(ProxyLog)
 class ProxyLogAdmin(admin.ModelAdmin):
+    search_help_text = 'Поиск по IP-адресу, домену, email или Telegram ID пользователя.'
     list_display = ("remote_ip", "linked_user", "timestamp")
     search_fields = ("raw_log", "domain", "remote_ip", "user__email", "user__telegram_id")
     fields = ("remote_ip", "linked_user", "domain", "timestamp", "user_logs")

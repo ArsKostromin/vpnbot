@@ -84,6 +84,7 @@ class VPNUserAdminForm(forms.ModelForm):
 @admin.register(VPNUser)
 class VPNUserAdmin(admin.ModelAdmin):
     form = VPNUserAdminForm
+    search_help_text = 'Поиск по email, Telegram ID или ID пользователя.'
     
     list_display = (
         'id', 'telegram_id', 'balance',

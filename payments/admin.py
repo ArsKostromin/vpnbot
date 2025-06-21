@@ -4,6 +4,7 @@ from .models import Payment
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
+    search_help_text = 'Поиск по ID платежа, email или Telegram ID пользователя.'
     list_display = ('inv_id', 'user', 'amount', 'status', 'created_at')
     list_filter = ('status', 'created_at')
     search_fields = ('inv_id', 'user__email', 'user__telegram_id')
