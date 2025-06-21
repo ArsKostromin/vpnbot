@@ -1,10 +1,18 @@
+import logging
 from django.contrib import admin
 from django.utils.html import format_html_join
 from django.urls import reverse
 from django.utils.safestring import mark_safe
+from django import forms
 
 from .models import VPNUser
 from proxy_logs.models import ProxyLog
+from django.contrib.auth.models import Permission, Group
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.auth.admin import GroupAdmin
+
+
+logger = logging.getLogger(__name__)
 
 
 class ProxyLogInline(admin.TabularInline):
@@ -26,17 +34,104 @@ class ProxyLogInline(admin.TabularInline):
         return LimitedFormSet
 
 
+class VPNUserAdminForm(forms.ModelForm):
+    password = forms.CharField(
+        label='Пароль',
+        widget=forms.PasswordInput(),
+        required=False,
+        help_text='Оставьте пустым, чтобы не изменять пароль'
+    )
+
+    class Meta:
+        model = VPNUser
+        exclude = ['password']  # <-- убираем password из модели
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields['password'].help_text = 'Оставьте пустым, чтобы не изменять пароль'
+        else:
+            self.fields['password'].required = True
+            self.fields['password'].help_text = 'Введите пароль для нового пользователя'
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if not self.instance.pk:
+            email = cleaned_data.get('email')
+            telegram_id = cleaned_data.get('telegram_id')
+            if not email and not telegram_id:
+                raise forms.ValidationError("Необходимо указать либо email, либо telegram_id")
+        return cleaned_data
+
+    def save(self, commit=True):
+        # Получаем пользователя, но пока не сохраняем в базу
+        user = super().save(commit=False)
+        raw_password = self.cleaned_data.get('password')
+
+        # Устанавливаем пароль, если он был введен в форме
+        if raw_password:
+            user.set_password(raw_password)
+            logger.warning(
+                f"Admin is changing password for user "
+                f"Email: {user.email}, Telegram ID: {user.telegram_id}"
+            )
+
+        if commit:
+            user.save()
+        return user
+
+
 @admin.register(VPNUser)
 class VPNUserAdmin(admin.ModelAdmin):
+    form = VPNUserAdminForm
+    
     list_display = (
         'id', 'telegram_id', 'balance',
         'created_at', 'referrals_list', 'subscriptions_list'
     )
     list_filter = ('created_at',)
-    search_fields = ('email', 'telegram_id', 'current_ip', 'id')
+    search_fields = ('email', 'telegram_id', 'id')
     actions = []
     inlines = [ProxyLogInline]
-    readonly_fields = ['view_logs_link']
+    readonly_fields = ['view_logs_link', 'date_joined', 'uuid', 'last_login']
+
+    fieldsets = (
+        (None, {'fields': ('email', 'telegram_id', 'password')}),
+        (None, {'fields': ('balance', 'link_code', 'referred_by')}),
+        ('Системная информация', {'fields': ('date_joined', 'uuid', 'last_login')}),
+        ('Разрешения', {'fields': ('is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Дополнительно', {'fields': ('view_logs_link',)}),
+    )
+
+    def save_model(self, request, obj, form, change):
+        """
+        Переопределяем сохранение. Теперь основная логика в form.save().
+        """
+        # Если это новый пользователь и пароль не задан, генерируем случайный.
+        if not change and not form.cleaned_data.get('password'):
+            import random
+            import string
+            password = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+            obj.set_password(password)
+            self.message_user(request, f"Сгенерирован пароль для нового пользователя: {password}", level='INFO')
+
+        # Сохраняем объект через form.save() или super()
+        # form.save() вызовет наш переопределенный метод в VPNUserAdminForm
+        super().save_model(request, obj, form, change)
+
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        """
+        Фильтрует список прав пользователя, убирая все, что связано с Celery.
+        """
+        if db_field.name == "user_permissions":
+            # Получаем Content Types, которые нужно исключить
+            excluded_apps = ['django_celery_beat']
+            excluded_cts = ContentType.objects.filter(app_label__in=excluded_apps)
+            
+            # Фильтруем права, исключая связанные с этими Content Types
+            kwargs["queryset"] = Permission.objects.exclude(content_type__in=excluded_cts).select_related('content_type')
+            
+        return super().formfield_for_manytomany(db_field, request, **kwargs)
 
     def view_logs_link(self, obj):
         url = reverse("admin:proxy_logs_proxylog_changelist") + f"?user__id__exact={obj.id}"
@@ -68,3 +163,22 @@ class VPNUserAdmin(admin.ModelAdmin):
             )
         )
     subscriptions_list.short_description = "Подписки"
+
+
+# --- Кастомизация админки для Групп ---
+
+class CustomGroupAdmin(GroupAdmin):
+    """
+    Кастомная админка для модели Group, чтобы отфильтровать права Celery.
+    """
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        if db_field.name == "permissions":
+            excluded_apps = ['django_celery_beat']
+            excluded_cts = ContentType.objects.filter(app_label__in=excluded_apps)
+            kwargs["queryset"] = Permission.objects.exclude(content_type__in=excluded_cts).select_related('content_type')
+        return super().formfield_for_manytomany(db_field, request, **kwargs)
+
+# Отменяем регистрацию стандартной админки для Group
+admin.site.unregister(Group)
+# Регистрируем Group с нашей кастомной админкой
+admin.site.register(Group, CustomGroupAdmin)

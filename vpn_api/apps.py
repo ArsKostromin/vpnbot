@@ -4,6 +4,7 @@ from django.apps import AppConfig
 class VpnApiConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'vpn_api'
+    verbose_name = 'Управление VPN'
 
     def ready(self):
         from django.contrib import admin

@@ -33,24 +33,26 @@ class SubscriptionAdmin(admin.ModelAdmin):
         return "-"
     short_vless_link.short_description = "VLESS"
 
-from django_celery_beat.models import (
-    PeriodicTask, IntervalSchedule, CrontabSchedule,
-    SolarSchedule, ClockedSchedule
-)
-
 @admin.register(VPNServer)
 class VPNServerAdmin(admin.ModelAdmin):
     list_display = ('name', 'country', 'domain', 'api_url', 'is_active')
     list_filter = ('is_active', 'country')
     search_fields = ('name', 'country', 'domain', 'api_url')
 
+# --- Безопасное удаление моделей из админки ---
+from django_celery_beat.models import (
+    PeriodicTask, IntervalSchedule, CrontabSchedule,
+    SolarSchedule, ClockedSchedule
+)
 
 def safe_unregister(model):
+    """Безопасно отменяет регистрацию модели, игнорируя ошибку, если модель не была зарегистрирована."""
     try:
         admin.site.unregister(model)
     except admin.sites.NotRegistered:
         pass
 
+# Убираем стандартные модели Celery Beat из админки
 safe_unregister(PeriodicTask)
 safe_unregister(IntervalSchedule)
 safe_unregister(CrontabSchedule)
