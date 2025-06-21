@@ -22,7 +22,6 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
             'discount_price',
             'current_price',
             'display_price',
-            'discount_text',
         ]
 
     def get_vpn_type_display(self, obj):

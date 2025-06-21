@@ -46,6 +46,14 @@ class SubscriptionPlan(models.Model):
     discount_percent = models.PositiveIntegerField(default=0, verbose_name="Скидка в %")
     discount_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Цена со скидкой")
 
+    def get_vpn_type_display(self):
+        # Django автоматически создает этот метод для полей с choices
+        return dict(self.VPN_TYPES).get(self.vpn_type, self.vpn_type)
+
+    def get_duration_display(self):
+        # Аналогично для длительности
+        return dict(self.DURATION_CHOICES).get(self.duration, self.duration)
+
     def get_current_price(self):
         if self.discount_active and self.discount_price:
             return self.discount_price
