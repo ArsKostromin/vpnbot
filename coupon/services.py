@@ -67,10 +67,10 @@ def apply_coupon_to_user(user, code, request=None):
 
         # Определяем сервер
         if coupon.vpn_type == "country":
+            # Пытаемся получить страну из запроса
             country = request.data.get("country") if request else None
-            if not country:
-                return {"data": {"detail": "Для этого типа промокода необходимо указать страну."}, "status": status.HTTP_400_BAD_REQUEST}
-            server = get_least_loaded_server_by_country(country)
+            # Если страна не предоставлена, ищем самый свободный сервер в любой стране
+            server = get_least_loaded_server_by_country(country) if country else get_least_loaded_server()
         else:
             server = get_least_loaded_server()
 
