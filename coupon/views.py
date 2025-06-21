@@ -25,7 +25,7 @@ class ApplyCouponView(APIView):
         if not code:
             return Response({"detail": "Промокод не указан."}, status=status.HTTP_400_BAD_REQUEST)
 
-        result = apply_coupon_to_user(user, code)
+        result = apply_coupon_to_user(user, code, request)
 
         # Вставляем ссылку в ответ, если она есть
         response_data = result.get("data", {})
