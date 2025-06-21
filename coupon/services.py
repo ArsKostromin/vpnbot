@@ -66,13 +66,13 @@ def apply_coupon_to_user(user, code, request=None):
             return {"data": {"detail": "Неизвестная длительность подписки."}, "status": status.HTTP_400_BAD_REQUEST}
 
         # Определяем сервер
-        if coupon.vpn_type == "country":
-            country = request.data.get("country") if request else None
-            if not country:
-                return {"data": {"detail": "У вас уже есть такая подписка."}, "status": status.HTTP_400_BAD_REQUEST}
-            server = get_least_loaded_server_by_country(country)
-        else:
-            server = get_least_loaded_server()
+        # if coupon.vpn_type == "country":
+        #     country = request.data.get("country") if request else None
+        #     if not country:
+        #         return {"data": {"detail": "У вас уже есть такая подписка."}, "status": status.HTTP_400_BAD_REQUEST}
+        #     server = get_least_loaded_server_by_country(country)
+        # else:
+        #     server = get_least_loaded_server()
 
         if not server:
             return {"data": {"detail": "Нет доступных VPN-серверов."}, "status": status.HTTP_503_SERVICE_UNAVAILABLE}
