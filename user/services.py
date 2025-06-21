@@ -26,7 +26,7 @@ def register_user_with_referral(telegram_id, referral_code=None):
     """
     user, created = VPNUser.objects.get_or_create(telegram_id=telegram_id)
 
-    if not created and user.is_banned:
+    if not created:  # and user.is_banned
         return user, created, Response({"error": "Пользователь заблокирован"}, status=status.HTTP_403_FORBIDDEN)
 
     if referral_code and not user.referred_by:
