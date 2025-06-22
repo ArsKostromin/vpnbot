@@ -7,5 +7,8 @@ class UserConfig(AppConfig):
     verbose_name = 'Пользователи'
     
     def ready(self):
-        # Импортируем сигналы при запуске приложения
-        import user.signals
+        # Импортируем сигналы только после полной загрузки Django
+        try:
+            import user.signals  # noqa
+        except ImportError:
+            pass
