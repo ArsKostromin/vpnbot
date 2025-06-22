@@ -113,17 +113,26 @@ class VPNUserAdmin(admin.ModelAdmin):
 
     def ban_users(self, request, queryset):
         """Action для бана выбранных пользователей"""
-        updated = queryset.update(
-            is_banned=True,
-            banned_at=timezone.now()
-        )
+        updated = 0
         
-        # Логируем действие
         for user in queryset:
+            # Сохраняем старое состояние для сигналов
+            old_is_banned = user.is_banned
+            
+            # Устанавливаем новые значения
+            user.is_banned = True
+            user.banned_at = timezone.now()
+            
+            # Сохраняем объект - это вызовет сигналы
+            user.save()
+            
+            # Логируем действие
             logger.warning(
                 f"Admin {request.user} заблокировал пользователя "
                 f"Email: {user.email}, Telegram ID: {user.telegram_id}"
             )
+            
+            updated += 1
         
         self.message_user(
             request,
@@ -134,17 +143,26 @@ class VPNUserAdmin(admin.ModelAdmin):
 
     def unban_users(self, request, queryset):
         """Action для разбана выбранных пользователей"""
-        updated = queryset.update(
-            is_banned=False,
-            banned_at=None
-        )
+        updated = 0
         
-        # Логируем действие
         for user in queryset:
+            # Сохраняем старое состояние для сигналов
+            old_is_banned = user.is_banned
+            
+            # Устанавливаем новые значения
+            user.is_banned = False
+            user.banned_at = None
+            
+            # Сохраняем объект - это вызовет сигналы
+            user.save()
+            
+            # Логируем действие
             logger.warning(
                 f"Admin {request.user} разблокировал пользователя "
                 f"Email: {user.email}, Telegram ID: {user.telegram_id}"
             )
+            
+            updated += 1
         
         self.message_user(
             request,
