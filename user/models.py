@@ -57,6 +57,10 @@ class VPNUser(AbstractBaseUser, PermissionsMixin):
     referred_by = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="referrals", verbose_name="Пригласивший")
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, verbose_name="UUID")
 
+    # --- Поля для механики бана ---
+    is_banned = models.BooleanField(default=False, verbose_name="Забанен")
+    ban_reason = models.TextField(blank=True, null=True, verbose_name="Причина бана")
+    banned_at = models.DateTimeField(null=True, blank=True, verbose_name="Дата бана")
     
     # Указываем кастомный менеджер
     objects = VPNUserManager()
@@ -72,6 +76,16 @@ class VPNUser(AbstractBaseUser, PermissionsMixin):
     class Meta:
         verbose_name_plural = 'Пользователи'
         verbose_name = 'Пользователь'
+    
+    def save(self, *args, **kwargs):
+        # Автоматически устанавливаем дату бана при первом бане
+        if self.is_banned and not self.banned_at:
+            self.banned_at = timezone.now()
+        # Сбрасываем дату бана при разбане
+        elif not self.is_banned and self.banned_at:
+            self.banned_at = None
+            
+        super().save(*args, **kwargs)
         
     def apply_coupon(self, coupon_code: str):
         try:

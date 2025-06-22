@@ -87,19 +87,24 @@ class VPNUserAdmin(admin.ModelAdmin):
     search_help_text = 'Поиск по email, Telegram ID или ID пользователя.'
     
     list_display = (
-        'id', 'telegram_id', 'balance',
+        'id', 'telegram_id', 'balance', 'is_banned', 'banned_at',
         'created_at', 'referrals_list', 'subscriptions_list'
     )
-    list_filter = ('created_at',)
+    list_filter = ('created_at', 'is_banned', 'banned_at')
     search_fields = ('email', 'telegram_id', 'id')
     actions = []
     inlines = [ProxyLogInline]
-    readonly_fields = ['view_logs_link', 'date_joined', 'uuid', 'last_login']
+    readonly_fields = ['view_logs_link', 'date_joined', 'uuid', 'last_login', 'banned_at']
 
     fieldsets = (
         (None, {'fields': ('email', 'telegram_id', 'password')}),
         (None, {'fields': ('balance', 'link_code', 'referred_by')}),
-        ('Системная информация', {'fields': ('date_joined', 'uuid', 'last_login')}),
+        ('Статус бана', {
+            'fields': ('is_banned', 'ban_reason'),
+            'classes': ('collapse',),
+            'description': 'Управление статусом бана пользователя'
+        }),
+        ('Системная информация', {'fields': ('date_joined', 'uuid', 'last_login', 'banned_at')}),
         ('Разрешения', {'fields': ('is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Дополнительно', {'fields': ('view_logs_link',)}),
     )
