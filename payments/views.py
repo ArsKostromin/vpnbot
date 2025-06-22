@@ -44,7 +44,18 @@ def create_payment(request):
     except (ValueError, TypeError):
         return Response({"error": "Некорректная сумма."}, status=status.HTTP_400_BAD_REQUEST)
 
-    user = VPNUser.objects.get(telegram_id=telegram_id)
+    try:
+        user = VPNUser.objects.get(telegram_id=telegram_id)
+    except VPNUser.DoesNotExist:
+        return Response({"error": "Пользователь не найден"}, status=status.HTTP_404_NOT_FOUND)
+
+    # Проверка на бан пользователя
+    if user.is_banned:
+        logger.warning(f"Забаненный пользователь {telegram_id} пытается создать платёж")
+        return Response({
+            "error": "Ваш аккаунт заблокирован",
+            "ban_reason": user.ban_reason or "Причина не указана"
+        }, status=status.HTTP_403_FORBIDDEN)
 
     payment = Payment.objects.create(
         user=user,
@@ -80,6 +91,14 @@ def payment_result(request):
     except Payment.DoesNotExist:
         logger.error(f"[payment_result] Платёж с InvId={inv_id} не найден")
         return Response({"error": "Payment not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    # Проверка на бан пользователя
+    if payment.user.is_banned:
+        logger.warning(f"[payment_result] Забаненный пользователь {payment.user.telegram_id} пытается обработать платёж")
+        return Response({
+            "error": "Ваш аккаунт заблокирован",
+            "ban_reason": payment.user.ban_reason or "Причина не указана"
+        }, status=status.HTTP_403_FORBIDDEN)
 
     if payment.status == Payment.Status.SUCCESS:
         logger.warning(f"[payment_result] Повторный колбэк: платёж {inv_id} уже успешно обработан")
@@ -183,6 +202,14 @@ class CreateCryptoPaymentAPIView(APIView):
         if not user:
             return Response({"error": "Пользователь не найден"}, status=404)
 
+        # Проверка на бан пользователя
+        if user.is_banned:
+            logger.warning(f"Забаненный пользователь {telegram_id} пытается создать криптоплатёж")
+            return Response({
+                "error": "Ваш аккаунт заблокирован",
+                "ban_reason": user.ban_reason or "Причина не указана"
+            }, status=status.HTTP_403_FORBIDDEN)
+
         payment = Payment.objects.create(
             user=user,
             inv_id=generate_unique_inv_id(),
@@ -233,7 +260,20 @@ def crypto_webhook(request):
             logger.warning(f"❌ Не удалось достать telegram_id: {e}")
             return JsonResponse({"error": "Invalid order_id"}, status=400)
 
-        user = VPNUser.objects.get(telegram_id=int(telegram_id))
+        try:
+            user = VPNUser.objects.get(telegram_id=int(telegram_id))
+        except VPNUser.DoesNotExist:
+            logger.warning(f"❌ Пользователь с telegram_id={telegram_id} не найден")
+            return JsonResponse({"error": "User not found"}, status=404)
+
+        # Проверка на бан пользователя
+        if user.is_banned:
+            logger.warning(f"❌ Забаненный пользователь {telegram_id} пытается обработать криптоплатёж")
+            return JsonResponse({
+                "error": "Account is banned",
+                "ban_reason": user.ban_reason or "Reason not specified"
+            }, status=403)
+
         user.balance += Decimal(amount)
         user.save()
 
@@ -271,7 +311,18 @@ class StarPaymentAPIView(APIView):
         user_id = request.data.get("user_id")
         amount = float(request.data.get("amount"))
 
-        user = VPNUser.objects.get(telegram_id=user_id)
+        try:
+            user = VPNUser.objects.get(telegram_id=user_id)
+        except VPNUser.DoesNotExist:
+            return Response({"error": "Пользователь не найден"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Проверка на бан пользователя
+        if user.is_banned:
+            logger.warning(f"Забаненный пользователь {user_id} пытается получить начисление звёзд")
+            return Response({
+                "error": "Ваш аккаунт заблокирован",
+                "ban_reason": user.ban_reason or "Причина не указана"
+            }, status=status.HTTP_403_FORBIDDEN)
 
         payment = Payment.objects.create(
             user=user,

@@ -34,6 +34,14 @@ class BuySubscriptionView(APIView):
             logger.warning(f"Пользователь с telegram_id={telegram_id} не найден")
             return Response({"error": "Пользователь не найден"}, status=status.HTTP_404_NOT_FOUND)
 
+        # Проверка на бан пользователя
+        if user.is_banned:
+            logger.warning(f"Забаненный пользователь {telegram_id} пытается купить подписку")
+            return Response({
+                "error": "Ваш аккаунт заблокирован",
+                "ban_reason": user.ban_reason or "Причина не указана"
+            }, status=status.HTTP_403_FORBIDDEN)
+
         serializer = BuySubscriptionSerializer(data=request.data, context={'user': user})
         serializer.is_valid(raise_exception=True)
 

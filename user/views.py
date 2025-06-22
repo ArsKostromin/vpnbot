@@ -32,6 +32,14 @@ class RegisterUserView(APIView):
             logger.warning(f"Ошибка при регистрации пользователя {telegram_id}: {error_response.data}")
             return error_response
 
+        # Проверка на бан пользователя (если пользователь уже существовал)
+        if not created and user.is_banned:
+            logger.warning(f"Забаненный пользователь {telegram_id} пытается зарегистрироваться")
+            return Response({
+                "error": "Ваш аккаунт заблокирован",
+                "ban_reason": user.ban_reason or "Причина не указана"
+            }, status=status.HTTP_403_FORBIDDEN)
+
         logger.info(f"Пользователь {telegram_id} зарегистрирован. New: {created}, link_code: {user.link_code}")
 
         return Response({

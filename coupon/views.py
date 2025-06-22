@@ -22,6 +22,13 @@ class ApplyCouponView(APIView):
         except VPNUser.DoesNotExist:
             return Response({"error": "Пользователь не найден"}, status=status.HTTP_404_NOT_FOUND)
 
+        # Проверка на бан пользователя
+        if user.is_banned:
+            return Response({
+                "error": "Ваш аккаунт заблокирован",
+                "ban_reason": user.ban_reason or "Причина не указана"
+            }, status=status.HTTP_403_FORBIDDEN)
+
         if not code:
             return Response({"detail": "Промокод не указан."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -46,6 +53,13 @@ def generate_promo_code(request):
         user = VPNUser.objects.get(telegram_id=telegram_id)
     except VPNUser.DoesNotExist:
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    # Проверка на бан пользователя
+    if user.is_banned:
+        return Response({
+            "error": "Ваш аккаунт заблокирован",
+            "ban_reason": user.ban_reason or "Причина не указана"
+        }, status=status.HTTP_403_FORBIDDEN)
 
     # Логика генерации промокода вынесена
     promo_code = generate_coupon_for_user(user)
