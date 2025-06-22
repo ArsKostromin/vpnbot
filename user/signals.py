@@ -1,4 +1,4 @@
-from django.db.models.signals import post_save
+from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from .models import VPNUser
@@ -7,6 +7,22 @@ from vpn_api.utils import delete_vless, create_vless
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Глобальная переменная для хранения старого состояния
+_old_ban_status = {}
+
+
+@receiver(pre_save, sender=VPNUser)
+def store_old_ban_status(sender, instance, **kwargs):
+    """
+    Сохраняет старое состояние бана перед сохранением.
+    """
+    if instance.pk:  # Только для существующих пользователей
+        try:
+            old_instance = VPNUser.objects.get(pk=instance.pk)
+            _old_ban_status[instance.pk] = old_instance.is_banned
+        except VPNUser.DoesNotExist:
+            _old_ban_status[instance.pk] = False
 
 
 @receiver(post_save, sender=VPNUser)
@@ -20,21 +36,24 @@ def handle_user_ban_status_change(sender, instance, created, **kwargs):
         return  # Новый пользователь, ничего не делаем
     
     try:
-        # Получаем предыдущее состояние из базы данных
-        old_instance = VPNUser.objects.get(pk=instance.pk)
+        # Получаем старое состояние из глобальной переменной
+        old_is_banned = _old_ban_status.get(instance.pk, False)
         
         # Проверяем, изменился ли статус бана
-        if old_instance.is_banned != instance.is_banned:
+        if old_is_banned != instance.is_banned:
+            logger.info(f"Статус бана изменился для пользователя {instance.pk}: {old_is_banned} -> {instance.is_banned}")
+            
             if instance.is_banned:
                 # Пользователь забанен
                 handle_user_banned(instance)
             else:
                 # Пользователь разбанен
                 handle_user_unbanned(instance)
+        
+        # Очищаем старое состояние
+        if instance.pk in _old_ban_status:
+            del _old_ban_status[instance.pk]
                 
-    except VPNUser.DoesNotExist:
-        # Пользователь был удален, ничего не делаем
-        pass
     except Exception as e:
         logger.error(f"Ошибка при обработке изменения статуса бана для пользователя {instance.pk}: {e}")
 

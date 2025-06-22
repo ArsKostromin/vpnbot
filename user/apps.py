@@ -5,3 +5,7 @@ class UserConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'user'
     verbose_name = 'Пользователи'
+    
+    def ready(self):
+        # Импортируем сигналы при запуске приложения
+        import user.signals
