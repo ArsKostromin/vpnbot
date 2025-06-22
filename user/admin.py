@@ -4,6 +4,8 @@ from django.utils.html import format_html_join
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django import forms
+from django.utils import timezone
+from django.contrib import messages
 
 from .models import VPNUser
 from proxy_logs.models import ProxyLog
@@ -92,7 +94,7 @@ class VPNUserAdmin(admin.ModelAdmin):
     )
     list_filter = ('created_at', 'is_banned', 'banned_at')
     search_fields = ('email', 'telegram_id', 'id')
-    actions = []
+    actions = ['ban_users', 'unban_users']
     inlines = [ProxyLogInline]
     readonly_fields = ['view_logs_link', 'date_joined', 'uuid', 'last_login', 'banned_at']
 
@@ -108,6 +110,48 @@ class VPNUserAdmin(admin.ModelAdmin):
         ('Разрешения', {'fields': ('is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Дополнительно', {'fields': ('view_logs_link',)}),
     )
+
+    def ban_users(self, request, queryset):
+        """Action для бана выбранных пользователей"""
+        updated = queryset.update(
+            is_banned=True,
+            banned_at=timezone.now()
+        )
+        
+        # Логируем действие
+        for user in queryset:
+            logger.warning(
+                f"Admin {request.user} заблокировал пользователя "
+                f"Email: {user.email}, Telegram ID: {user.telegram_id}"
+            )
+        
+        self.message_user(
+            request,
+            f"Заблокировано {updated} пользователей.",
+            messages.SUCCESS
+        )
+    ban_users.short_description = "Заблокировать выбранных пользователей"
+
+    def unban_users(self, request, queryset):
+        """Action для разбана выбранных пользователей"""
+        updated = queryset.update(
+            is_banned=False,
+            banned_at=None
+        )
+        
+        # Логируем действие
+        for user in queryset:
+            logger.warning(
+                f"Admin {request.user} разблокировал пользователя "
+                f"Email: {user.email}, Telegram ID: {user.telegram_id}"
+            )
+        
+        self.message_user(
+            request,
+            f"Разблокировано {updated} пользователей.",
+            messages.SUCCESS
+        )
+    unban_users.short_description = "Разблокировать выбранных пользователей"
 
     def save_model(self, request, obj, form, change):
         """
