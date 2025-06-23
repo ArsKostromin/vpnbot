@@ -118,13 +118,12 @@ def success_payment(request):
     return HttpResponse("""
         <html>
             <head>
-                <title>Оплата прошла успешно</title>
+                <title>Ошибка оплаты</title>
                 <style>
                     body { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; }
                     h1, p { text-align: center; }
                 </style>
                 <script>
-                    // Пытаемся закрыть окно
                     window.onload = function() {
                         window.close();
                         setTimeout(() => {
@@ -134,7 +133,7 @@ def success_payment(request):
                 </script>
             </head>
             <body>
-                <h1>Оплата прошла успешно! 🎉</h1>
+                <h1>Оплата отменена или произошла ошибка.</h1>
                 <p>Вы будете перенаправлены...</p>
             </body>
         </html>
@@ -148,15 +147,11 @@ def fail_payment(request):
         <html>
             <head>
                 <title>Ошибка оплаты</title>
-                <style>
-                    body { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-                    h1, p { text-align: center; }
-                </style>
                 <script>
                     window.onload = function() {
                         window.close();
                         setTimeout(() => {
-                            window.location.href = 'https://t.me/Anonixvpn_vpnBot'; // fallback
+                            window.location.href = 'https://t.me/fastvpnVPNs_bot'; // fallback
                         }, 1000);
                     }
                 </script>
