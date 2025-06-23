@@ -35,6 +35,10 @@ class SubscriptionAdmin(admin.ModelAdmin):
         return "-"
     short_vless_link.short_description = "VLESS"
 
+    def delete_queryset(self, request, queryset):
+        for obj in queryset:
+            obj.delete()
+
 @admin.register(VPNServer)
 class VPNServerAdmin(admin.ModelAdmin):
     search_help_text = 'Поиск по названию, стране, домену или URL.'
