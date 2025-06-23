@@ -61,7 +61,13 @@ def generate_promo_code(request):
             "ban_reason": user.ban_reason or "Причина не указана"
         }, status=status.HTTP_403_FORBIDDEN)
 
+    # Проверка: выдавался ли уже промокод
+    if user.promo_code_issued:
+        return Response({"error": "Промокод уже был выдан ранее"}, status=status.HTTP_400_BAD_REQUEST)
+
     # Логика генерации промокода вынесена
     promo_code = generate_coupon_for_user(user)
+    user.promo_code_issued = True
+    user.save(update_fields=["promo_code_issued"])
 
     return Response({"promo_code": promo_code})

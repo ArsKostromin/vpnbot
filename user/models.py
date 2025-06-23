@@ -62,6 +62,9 @@ class VPNUser(AbstractBaseUser, PermissionsMixin):
     ban_reason = models.TextField(blank=True, null=True, verbose_name="Причина бана")
     banned_at = models.DateTimeField(null=True, blank=True, verbose_name="Дата бана")
     
+    # Флаг: выдавался ли уже промокод
+    promo_code_issued = models.BooleanField(default=False, verbose_name="Промокод выдан")
+
     # Указываем кастомный менеджер
     objects = VPNUserManager()
 
