@@ -119,6 +119,10 @@ def success_payment(request):
         <html>
             <head>
                 <title>Оплата прошла успешно</title>
+                <style>
+                    body { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+                    h1, p { text-align: center; }
+                </style>
                 <script>
                     // Пытаемся закрыть окно
                     window.onload = function() {
@@ -144,6 +148,10 @@ def fail_payment(request):
         <html>
             <head>
                 <title>Ошибка оплаты</title>
+                <style>
+                    body { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+                    h1, p { text-align: center; }
+                </style>
                 <script>
                     window.onload = function() {
                         window.close();
