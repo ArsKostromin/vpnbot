@@ -108,7 +108,7 @@ def apply_coupon_to_user(user, code, request=None):
 
         return {
             "data": {
-                "detail": f"Промо-подписка активирована на {coupon.duration}.",
+                "detail": f"Промо-подписка активирована.",
                 "subscription_id": subscription.id,
                 "start_date": subscription.start_date,
                 "end_date": subscription.end_date,

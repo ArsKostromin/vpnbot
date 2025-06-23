@@ -143,7 +143,7 @@ def success_payment(request):
                     window.onload = function() {
                         window.close();
                         setTimeout(() => {
-                            window.location.href = 'https://t.me/fastvpnVPNs_bot'; // fallback
+                            window.location.href = 'https://t.me/Anonixvpn_vpnBot'; // fallback
                         }, 1000);
                     }
                 </script>
@@ -167,7 +167,7 @@ def fail_payment(request):
                     window.onload = function() {
                         window.close();
                         setTimeout(() => {
-                            window.location.href = 'https://t.me/fastvpnVPNs_bot'; // fallback
+                            window.location.href = 'https://t.me/Anonixvpn_vpnBot'; // fallback
                         }, 1000);
                     }
                 </script>

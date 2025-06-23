@@ -12,7 +12,7 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
     
 @admin.register(Subscription)
 class SubscriptionAdmin(admin.ModelAdmin):
-    search_help_text = 'Поиск по email, Telegram ID, UUID, типу, длительности или цене тарифа.'
+    search_help_text = 'Поиск по email, Telegram ID, UUID, типу(socials, torrents, country, secure, serfing), длительности или цене тарифа.'
     list_display = (
         'user', 'plan', 'is_active', 'start_date', 'end_date',
         'auto_renew', 'short_vless_link', 'uuid'  # <-- показываем UUID в списке
