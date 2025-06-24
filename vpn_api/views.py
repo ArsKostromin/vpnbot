@@ -12,6 +12,7 @@ import uuid
 from .utils import create_vless
 from .services import extend_subscription, get_duration_delta, get_least_loaded_server, get_least_loaded_server_by_country
 from uuid import uuid4, UUID
+from decimal import Decimal
 
 
 logger = logging.getLogger(__name__)
@@ -70,15 +71,14 @@ class BuySubscriptionView(APIView):
         # --- Логика одноразовой скидки для пригласившего ---
         discount_applied = False
         discount_amount = 0
-        if user.referred_by:
-            inviter = user.referred_by
-            if not inviter.referral_discount_used and inviter.referrals.exists():
-                discount_amount = price * 0.10
-                price = price - discount_amount
-                inviter.referral_discount_used = True
-                inviter.save()
-                discount_applied = True
-                logger.warning(f"Пригласившему пользователю {inviter.telegram_id} применена одноразовая скидка 10% на покупку подписки.")
+        # Скидка только для пригласившего, если у него есть хотя бы один приглашённый и скидка не использована
+        if user.referrals.exists() and not user.referral_discount_used:
+            discount_amount = price * Decimal('0.10')
+            price = price - discount_amount
+            user.referral_discount_used = True
+            user.save()
+            discount_applied = True
+            logger.info(f"Пользователю {user.telegram_id} применена одноразовая скидка 10% на покупку подписки.")
         # --- Конец логики скидки ---
 
         if user.balance < price:
