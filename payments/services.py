@@ -39,29 +39,24 @@ def generate_robokassa_payment_link(payment: Payment) -> str:
     is_test = settings.ROBOKASSA_IS_TEST
 
     rate = get_usd_to_rub_rate()
-
-    # payment.amount всегда в долларах (бот показывает цену в долларах)
     amount_usd = payment.amount
-
-    # Переводим сумму в рубли для Robokassa
     amount_rub = (amount_usd * rate).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    amount_rub_str = format(amount_rub, '.2f')  # всегда две цифры после точки
 
-    # Сохраняем валюту, если не указана
     if payment.currency.upper() != "USD":
         payment.currency = "USD"
         payment.save(update_fields=["currency"])
 
-    signature_raw = f"{login}:{amount_rub}:{payment.inv_id}:{password1}"
+    signature_raw = f"{login}:{amount_rub_str}:{payment.inv_id}:{password1}"
     signature = hashlib.md5(signature_raw.encode('utf-8')).hexdigest()
 
     base_url = "https://auth.robokassa.ru/Merchant/Index.aspx"
-    params = f"MerchantLogin={login}&OutSum={amount_rub}&InvId={payment.inv_id}&SignatureValue={signature}"
+    params = f"MerchantLogin={login}&OutSum={amount_rub_str}&InvId={payment.inv_id}&SignatureValue={signature}"
 
     if is_test:
         params += "&IsTest=1"
 
     return f"{base_url}?{params}"
-
 
 
 def verify_robokassa_signature(out_sum: str, inv_id: str, received_signature: str) -> bool:
