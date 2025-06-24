@@ -67,6 +67,20 @@ class BuySubscriptionView(APIView):
                 }, status=status.HTTP_409_CONFLICT)
 
         # Новая подписка
+        # --- Логика одноразовой скидки для пригласившего ---
+        discount_applied = False
+        discount_amount = 0
+        if user.referred_by:
+            inviter = user.referred_by
+            if not inviter.referral_discount_used and inviter.referrals.exists():
+                discount_amount = price * 0.10
+                price = price - discount_amount
+                inviter.referral_discount_used = True
+                inviter.save()
+                discount_applied = True
+                logger.info(f"Пригласившему пользователю {inviter.telegram_id} применена одноразовая скидка 10% на покупку подписки.")
+        # --- Конец логики скидки ---
+
         if user.balance < price:
             logger.warning("Недостаточно средств для новой подписки")
             return Response({"error": "Недостаточно средств"}, status=402)
