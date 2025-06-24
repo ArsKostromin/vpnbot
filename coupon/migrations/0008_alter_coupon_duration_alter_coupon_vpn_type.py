@@ -18,6 +18,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='coupon',
             name='vpn_type',
-            field=models.CharField(blank=True, choices=[('socials', 'для соц.сетей'), ('torrents', 'Для загрузки файлов'), ('secure', '🛡 Двойное шифрование'), ('country', '🌐 Выбор по стране'), ('serfing', 'Для серфинга')], max_length=10, null=True, verbose_name='Тип VPN'),
+            field=models.CharField(blank=True, choices=[('socials', 'Для соцсетей'), ('torrents', 'Для загрузки файлов'), ('secure', '🛡 Двойное шифрование'), ('country', '🌐 Выбор по стране'), ('serfing', 'Для серфинга')], max_length=10, null=True, verbose_name='Тип VPN'),
         ),
     ]

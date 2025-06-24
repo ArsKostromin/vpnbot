@@ -24,7 +24,7 @@ class VPNServer(models.Model):
 
 class SubscriptionPlan(models.Model):
     VPN_TYPES = [
-        ('socials', 'для соц.сетей'),
+        ('socials', 'Для соцсетей'),
         ('torrents', 'Для загрузки файлов'),
         ('secure', '🛡 Двойное шифрование'),
         ('country', '🌐 Выбор по стране'),

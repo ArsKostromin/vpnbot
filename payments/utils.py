@@ -10,11 +10,15 @@ def apply_payment(user: VPNUser, amount: Decimal):
         user.balance += amount
         user.save()
 
+        # Логика одноразовой скидки для пригласившего
         if user.referred_by:
-            bonus = amount * Decimal('0.10')
-            user.referred_by.balance += bonus
-            user.referred_by.save()
-            user.got_referral_bonus = True
-            user.save()
+            inviter = user.referred_by
+            # Если у пригласившего есть хотя бы один приглашённый и скидка не использована
+            if not inviter.referral_discount_used and inviter.referrals.exists():
+                discount = amount * Decimal('0.10')
+                inviter.balance += discount
+                inviter.referral_discount_used = True
+                inviter.save()
+                logger.info(f"Пригласившему пользователю {inviter.telegram_id} начислена одноразовая скидка 10% ({discount})")
     except Exception as e:
         logger.exception(f"Ошибка при пополнении баланса: {e}")

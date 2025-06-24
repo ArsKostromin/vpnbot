@@ -111,7 +111,6 @@ def payment_result(request):
 
     return Response(f"OK{inv_id}")
 
-
 @api_view(["GET", "POST"])
 def success_payment(request):
     """Закрывает окно после успешной оплаты."""
@@ -138,7 +137,6 @@ def success_payment(request):
             </body>
         </html>
     """)
-
 
 @api_view(["GET", "POST"])
 def fail_payment(request):
