@@ -78,7 +78,7 @@ class BuySubscriptionView(APIView):
                 inviter.referral_discount_used = True
                 inviter.save()
                 discount_applied = True
-                logger.info(f"Пригласившему пользователю {inviter.telegram_id} применена одноразовая скидка 10% на покупку подписки.")
+                logger.warning(f"Пригласившему пользователю {inviter.telegram_id} применена одноразовая скидка 10% на покупку подписки.")
         # --- Конец логики скидки ---
 
         if user.balance < price:
