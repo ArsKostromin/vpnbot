@@ -20,7 +20,7 @@ def generate_crypto_payment_link(payment: Payment, asset: str, amount_rub: Decim
         "amount": str(amount_rub),
         "accepted_assets": asset,
         "description": f"Пополнение баланса для {payment.user.telegram_id}",
-        "payload": str(payment.inv_id),
+        "payload": str(payment.id),
     }
     print("DEBUG data to CryptoBot:", data)
 

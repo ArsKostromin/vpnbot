@@ -62,31 +62,31 @@ def payment_result(request):
     Обработка callback'а от Robokassa после оплаты.
     """
     out_sum = request.data.get("OutSum")
-    inv_id = request.data.get("InvId")
+    id = request.data.get("InvId")
     received_signature = request.data.get("SignatureValue", "").strip()
 
-    if not out_sum or not inv_id or not received_signature:
-        logger.warning(f"[payment_result] Не хватает полей: OutSum={out_sum}, InvId={inv_id}, Signature={received_signature}")
+    if not out_sum or not id or not received_signature:
+        logger.warning(f"[payment_result] Не хватает полей: OutSum={out_sum}, id={id}, Signature={received_signature}")
         return Response({"error": "Missing required fields."}, status=status.HTTP_400_BAD_REQUEST)
 
-    if not verify_robokassa_signature(out_sum, inv_id, received_signature):
-        logger.warning(f"[payment_result] Неверная подпись для InvId={inv_id}")
+    if not verify_robokassa_signature(out_sum, id, received_signature):
+        logger.warning(f"[payment_result] Неверная подпись для id={id}")
         return Response({"error": "Invalid signature."}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        payment = Payment.objects.get(id=inv_id)
+        payment = Payment.objects.get(id=id)
     except Payment.DoesNotExist:
-        logger.error(f"[payment_result] Платёж с id={inv_id} не найден")
+        logger.error(f"[payment_result] Платёж с id={id} не найден")
         return Response({"error": "Payment not found."}, status=status.HTTP_404_NOT_FOUND)
 
     if payment.status == Payment.Status.SUCCESS:
-        logger.warning(f"[payment_result] Повторный колбэк: платёж {inv_id} уже успешно обработан")
-        return Response(f"OK{inv_id}")
+        logger.warning(f"[payment_result] Повторный колбэк: платёж {id} уже успешно обработан")
+        return Response(f"OK{id}")
 
     apply_payment(payment.user, payment.amount)
     payment.status = Payment.Status.SUCCESS
     payment.save()
-    logger.warning(f"[payment_result] Платёж {inv_id} успешно применён и сохранён")
+    logger.warning(f"[payment_result] Платёж {id} успешно применён и сохранён")
 
     notify_payload = {
         "tg_id": payment.user.telegram_id,

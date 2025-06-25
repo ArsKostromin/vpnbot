@@ -50,10 +50,10 @@ def generate_robokassa_payment_link(payment: Payment) -> str:
     return f"{base_url}?{params}"
 
 
-def verify_robokassa_signature(out_sum: str, inv_id: str, received_signature: str) -> bool:
+def verify_robokassa_signature(out_sum: str, id: str, received_signature: str) -> bool:
     """
     Проверка цифровой подписи от Robokassa.
     """
-    my_signature_raw = f"{out_sum}:{inv_id}:{settings.ROBOKASSA_PASSWORD2}"
+    my_signature_raw = f"{out_sum}:{id}:{settings.ROBOKASSA_PASSWORD2}"
     my_signature = hashlib.md5(my_signature_raw.encode('utf-8')).hexdigest().upper()
     return received_signature.upper() == my_signature
