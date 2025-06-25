@@ -19,7 +19,6 @@ from payments.models import Payment
 from payments.cryptobot import generate_crypto_payment_link
 from payments.utils import apply_payment
 from payments.services import (
-    generate_unique_inv_id,
     generate_robokassa_payment_link,
     verify_robokassa_signature
 )
@@ -48,7 +47,6 @@ def create_payment(request):
 
     payment = Payment.objects.create(
         user=user,
-        inv_id=generate_unique_inv_id(),
         amount=Decimal(amount),
         status=Payment.Status.PENDING,
         currency='Рубли'
@@ -76,9 +74,9 @@ def payment_result(request):
         return Response({"error": "Invalid signature."}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        payment = Payment.objects.get(inv_id=inv_id)
+        payment = Payment.objects.get(id=inv_id)
     except Payment.DoesNotExist:
-        logger.error(f"[payment_result] Платёж с InvId={inv_id} не найден")
+        logger.error(f"[payment_result] Платёж с id={inv_id} не найден")
         return Response({"error": "Payment not found."}, status=status.HTTP_404_NOT_FOUND)
 
     if payment.status == Payment.Status.SUCCESS:
@@ -93,7 +91,7 @@ def payment_result(request):
     notify_payload = {
         "tg_id": payment.user.telegram_id,
         "amount": float(payment.amount),
-        "payment_id": inv_id
+        "payment_id": payment.id
     }
 
     try:
@@ -109,7 +107,7 @@ def payment_result(request):
     except Exception as e:
         logger.error(f"[payment_result] Ошибка при отправке уведомления в бота: {e}")
 
-    return Response(f"OK{inv_id}")
+    return Response(f"OK{payment.id}")
 
 @api_view(["GET", "POST"])
 def success_payment(request):
@@ -186,14 +184,13 @@ class CreateCryptoPaymentAPIView(APIView):
 
         payment = Payment.objects.create(
             user=user,
-            inv_id=generate_unique_inv_id(),
             amount=amount_rub,
             status=Payment.Status.PENDING,
             currency=asset,
         )
 
         pay_url = generate_crypto_payment_link(payment, asset, amount_rub)
-        return Response({"payment_url": pay_url, "inv_id": payment.inv_id})
+        return Response({"payment_url": pay_url, "inv_id": payment.id})
 
 import logging
 logger = logging.getLogger(__name__)
@@ -276,7 +273,6 @@ class StarPaymentAPIView(APIView):
 
         payment = Payment.objects.create(
             user=user,
-            inv_id=generate_unique_inv_id(),
             amount=amount,
             status=Payment.Status.SUCCESS,
             currency='Tg stars'

@@ -6,15 +6,6 @@ from django.conf import settings
 from payments.models import Payment
 
 
-def generate_unique_inv_id():
-    """
-    Генерация уникального ID для нового платежа, начиная с 1000.
-    """
-    last_payment = Payment.objects.order_by('-inv_id').first()
-    next_inv_id = (last_payment.inv_id + 1) if last_payment else 1000
-    return next_inv_id
-
-
 def get_usd_to_rub_rate() -> Decimal:
     """
     Получение актуального курса доллара к рублю с сайта ЦБ РФ.
@@ -47,11 +38,11 @@ def generate_robokassa_payment_link(payment: Payment) -> str:
         payment.currency = "USD"
         payment.save(update_fields=["currency"])
 
-    signature_raw = f"{login}:{amount_rub_str}:{payment.inv_id}:{password1}"
+    signature_raw = f"{login}:{amount_rub_str}:{payment.id}:{password1}"
     signature = hashlib.md5(signature_raw.encode('utf-8')).hexdigest()
 
     base_url = "https://auth.robokassa.ru/Merchant/Index.aspx"
-    params = f"MerchantLogin={login}&OutSum={amount_rub_str}&InvId={payment.inv_id}&SignatureValue={signature}"
+    params = f"MerchantLogin={login}&OutSum={amount_rub_str}&InvId={payment.id}&SignatureValue={signature}"
 
     if is_test:
         params += "&IsTest=1"
