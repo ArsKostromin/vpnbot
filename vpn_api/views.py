@@ -153,13 +153,21 @@ class SubscriptionPlanListView(APIView):
         plans = SubscriptionPlan.objects.all()
         user = None
         telegram_id = request.query_params.get('telegram_id')
+        logger.info(f"SubscriptionPlanListView: telegram_id={telegram_id}")
+        
         if telegram_id:
             try:
                 from user.models import VPNUser
                 user = VPNUser.objects.get(telegram_id=telegram_id)
+                logger.info(f"Пользователь найден: {user}, referred_by={user.referred_by}")
             except VPNUser.DoesNotExist:
                 user = None
+                logger.warning(f"Пользователь с telegram_id={telegram_id} не найден")
+        else:
+            logger.info("telegram_id не передан в query параметрах")
+        
         serializer = SubscriptionPlanSerializer(plans, many=True, context={'user': user})
+        logger.info(f"Сериализатор создан с user={user}")
         return Response(serializer.data)
 
 
