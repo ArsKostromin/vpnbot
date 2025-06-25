@@ -35,14 +35,28 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
 
     def get_current_price(self, obj):
         user = self.context.get('user')
-        price = obj.get_current_price()
+        # Берём базовую цену тарифа (без скидки тарифа)
+        base_price = obj.price
+        # Применяем скидку тарифа, если она есть
+        if obj.discount_active and obj.discount_price:
+            price = obj.discount_price
+        else:
+            price = base_price
+        # Применяем скидку реферала
         if user and getattr(user, 'referred_by', None):
             price = price * Decimal('0.90')
         return str(round(price, 2))
 
     def get_display_price(self, obj):
         user = self.context.get('user')
-        price = obj.get_current_price()
+        # Берём базовую цену тарифа (без скидки тарифа)
+        base_price = obj.price
+        # Применяем скидку тарифа, если она есть
+        if obj.discount_active and obj.discount_price:
+            price = obj.discount_price
+        else:
+            price = base_price
+        # Применяем скидку реферала
         if user and getattr(user, 'referred_by', None):
             return f"~{price}$~ {round(price * Decimal('0.90'), 2)}$"
         return obj.get_display_price()
@@ -62,7 +76,13 @@ class BuySubscriptionSerializer(serializers.Serializer):
         except SubscriptionPlan.DoesNotExist:
             raise serializers.ValidationError("Тариф не найден.")
 
-        current_price = plan.get_current_price()
+        # Берём базовую цену тарифа (без скидки тарифа)
+        base_price = plan.price
+        # Применяем скидку тарифа, если она есть
+        if plan.discount_active and plan.discount_price:
+            current_price = plan.discount_price
+        else:
+            current_price = base_price
         # Скидка 10% для пользователей с рефералом
         if getattr(user, 'referred_by', None):
             current_price = current_price * Decimal('0.90')
