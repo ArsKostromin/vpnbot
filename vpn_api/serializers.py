@@ -40,9 +40,7 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
         user = self.context.get('user')
         logger.warning(f"get_current_price: user={user}, plan_id={obj.id}, plan_price={obj.price}")
         
-        # Берём базовую цену тарифа (без скидки тарифа)
         base_price = obj.price
-        # Применяем скидку тарифа, если она есть
         if obj.discount_active and obj.discount_price:
             price = obj.discount_price
             logger.warning(f"Применена скидка тарифа: {base_price} -> {price}")
@@ -50,13 +48,13 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
             price = base_price
             logger.warning(f"Скидка тарифа не применяется: {price}")
         
-        # Применяем скидку реферала
-        if user and getattr(user, 'referred_by', None):
+        # Скидка только если у пользователя есть хотя бы один реферал
+        if user and hasattr(user, 'referrals') and user.referrals.exists():
             old_price = price
             price = price * Decimal('0.90')
-            logger.warning(f"Применена скидка реферала: {old_price} -> {price} (user.referred_by={user.referred_by})")
+            logger.warning(f"Применена скидка реферала: {old_price} -> {price} (user.referrals_count={user.referrals.count()})")
         else:
-            logger.warning(f"Скидка реферала не применяется: user={user}, referred_by={getattr(user, 'referred_by', None) if user else None}")
+            logger.warning(f"Скидка реферала не применяется: user={user}, referrals_count={user.referrals.count() if user else None}")
         
         result = str(round(price, 2))
         logger.warning(f"Итоговая цена: {result}")
@@ -66,16 +64,13 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
         user = self.context.get('user')
         logger.warning(f"get_display_price: user={user}, plan_id={obj.id}")
         
-        # Берём базовую цену тарифа (без скидки тарифа)
         base_price = obj.price
-        # Применяем скидку тарифа, если она есть
         if obj.discount_active and obj.discount_price:
             price = obj.discount_price
         else:
             price = base_price
         
-        # Применяем скидку реферала
-        if user and getattr(user, 'referred_by', None):
+        if user and hasattr(user, 'referrals') and user.referrals.exists():
             result = f"~{price}$~ {round(price * Decimal('0.90'), 2)}$"
             logger.warning(f"Отображение скидки реферала: {result}")
             return result
@@ -86,8 +81,8 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
 
     def get_has_referral_discount(self, obj):
         user = self.context.get('user')
-        has_discount = bool(user and getattr(user, 'referred_by', None))
-        logger.warning(f"has_referral_discount: user={user}, has_discount={has_discount}, referred_by={getattr(user, 'referred_by', None) if user else None}")
+        has_discount = bool(user and hasattr(user, 'referrals') and user.referrals.exists())
+        logger.warning(f"has_referral_discount: user={user}, has_discount={has_discount}, referrals_count={user.referrals.count() if user else None}")
         return has_discount
 
 
@@ -101,21 +96,19 @@ class BuySubscriptionSerializer(serializers.Serializer):
         except SubscriptionPlan.DoesNotExist:
             raise serializers.ValidationError("Тариф не найден.")
 
-        # Берём базовую цену тарифа (без скидки тарифа)
         base_price = plan.price
-        # Применяем скидку тарифа, если она есть
         if plan.discount_active and plan.discount_price:
             current_price = plan.discount_price
         else:
             current_price = base_price
-        # Скидка 10% для пользователей с рефералом
-        if getattr(user, 'referred_by', None):
+        # Скидка только если у пользователя есть хотя бы один реферал
+        if hasattr(user, 'referrals') and user.referrals.exists():
             current_price = current_price * Decimal('0.90')
         if user.balance < current_price:
             raise serializers.ValidationError("Недостаточно средств.")
 
         attrs['plan'] = plan
-        attrs['price'] = current_price  # можно пробросить в view, чтобы не пересчитывать
+        attrs['price'] = current_price
 
         return attrs
 

@@ -159,7 +159,7 @@ class SubscriptionPlanListView(APIView):
             try:
                 from user.models import VPNUser
                 user = VPNUser.objects.get(telegram_id=telegram_id)
-                logger.info(f"Пользователь найден: {user}, referred_by={user.referred_by}")
+                logger.info(f"Пользователь найден: {user}, referrals_count={user.referrals.count()}")
             except VPNUser.DoesNotExist:
                 user = None
                 logger.warning(f"Пользователь с telegram_id={telegram_id} не найден")
