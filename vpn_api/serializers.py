@@ -1,12 +1,14 @@
 ### serializers.py
 from rest_framework import serializers
 from .models import VPNServer, Subscription, SubscriptionPlan
+from decimal import Decimal
 
 class SubscriptionPlanSerializer(serializers.ModelSerializer):
     vpn_type_display = serializers.SerializerMethodField()
     duration_display = serializers.SerializerMethodField()
     current_price = serializers.SerializerMethodField()
     display_price = serializers.SerializerMethodField()
+    has_referral_discount = serializers.SerializerMethodField()
 
     class Meta:
         model = SubscriptionPlan
@@ -22,6 +24,7 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
             'discount_price',
             'current_price',
             'display_price',
+            'has_referral_discount',
         ]
 
     def get_vpn_type_display(self, obj):
@@ -31,10 +34,22 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
         return obj.get_duration_display()
 
     def get_current_price(self, obj):
-        return str(obj.get_current_price())
+        user = self.context.get('user')
+        price = obj.get_current_price()
+        if user and getattr(user, 'referred_by', None):
+            price = price * Decimal('0.90')
+        return str(round(price, 2))
 
     def get_display_price(self, obj):
+        user = self.context.get('user')
+        price = obj.get_current_price()
+        if user and getattr(user, 'referred_by', None):
+            return f"~{price}$~ {round(price * Decimal('0.90'), 2)}$"
         return obj.get_display_price()
+
+    def get_has_referral_discount(self, obj):
+        user = self.context.get('user')
+        return bool(user and getattr(user, 'referred_by', None))
 
 
 class BuySubscriptionSerializer(serializers.Serializer):
@@ -48,6 +63,9 @@ class BuySubscriptionSerializer(serializers.Serializer):
             raise serializers.ValidationError("Тариф не найден.")
 
         current_price = plan.get_current_price()
+        # Скидка 10% для пользователей с рефералом
+        if getattr(user, 'referred_by', None):
+            current_price = current_price * Decimal('0.90')
         if user.balance < current_price:
             raise serializers.ValidationError("Недостаточно средств.")
 

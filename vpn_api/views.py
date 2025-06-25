@@ -151,7 +151,15 @@ class SubscriptionPlanListView(APIView):
 
     def get(self, request):
         plans = SubscriptionPlan.objects.all()
-        serializer = SubscriptionPlanSerializer(plans, many=True)
+        user = None
+        telegram_id = request.query_params.get('telegram_id')
+        if telegram_id:
+            try:
+                from user.models import VPNUser
+                user = VPNUser.objects.get(telegram_id=telegram_id)
+            except VPNUser.DoesNotExist:
+                user = None
+        serializer = SubscriptionPlanSerializer(plans, many=True, context={'user': user})
         return Response(serializer.data)
 
 
