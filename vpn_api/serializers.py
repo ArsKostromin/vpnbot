@@ -38,33 +38,33 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
 
     def get_current_price(self, obj):
         user = self.context.get('user')
-        logger.info(f"get_current_price: user={user}, plan_id={obj.id}, plan_price={obj.price}")
+        logger.warning(f"get_current_price: user={user}, plan_id={obj.id}, plan_price={obj.price}")
         
         # Берём базовую цену тарифа (без скидки тарифа)
         base_price = obj.price
         # Применяем скидку тарифа, если она есть
         if obj.discount_active and obj.discount_price:
             price = obj.discount_price
-            logger.info(f"Применена скидка тарифа: {base_price} -> {price}")
+            logger.warning(f"Применена скидка тарифа: {base_price} -> {price}")
         else:
             price = base_price
-            logger.info(f"Скидка тарифа не применяется: {price}")
+            logger.warning(f"Скидка тарифа не применяется: {price}")
         
         # Применяем скидку реферала
         if user and getattr(user, 'referred_by', None):
             old_price = price
             price = price * Decimal('0.90')
-            logger.info(f"Применена скидка реферала: {old_price} -> {price} (user.referred_by={user.referred_by})")
+            logger.warning(f"Применена скидка реферала: {old_price} -> {price} (user.referred_by={user.referred_by})")
         else:
-            logger.info(f"Скидка реферала не применяется: user={user}, referred_by={getattr(user, 'referred_by', None) if user else None}")
+            logger.warning(f"Скидка реферала не применяется: user={user}, referred_by={getattr(user, 'referred_by', None) if user else None}")
         
         result = str(round(price, 2))
-        logger.info(f"Итоговая цена: {result}")
+        logger.warning(f"Итоговая цена: {result}")
         return result
 
     def get_display_price(self, obj):
         user = self.context.get('user')
-        logger.info(f"get_display_price: user={user}, plan_id={obj.id}")
+        logger.warning(f"get_display_price: user={user}, plan_id={obj.id}")
         
         # Берём базовую цену тарифа (без скидки тарифа)
         base_price = obj.price
@@ -77,17 +77,17 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
         # Применяем скидку реферала
         if user and getattr(user, 'referred_by', None):
             result = f"~{price}$~ {round(price * Decimal('0.90'), 2)}$"
-            logger.info(f"Отображение скидки реферала: {result}")
+            logger.warning(f"Отображение скидки реферала: {result}")
             return result
         else:
             result = obj.get_display_price()
-            logger.info(f"Обычное отображение цены: {result}")
+            logger.warning(f"Обычное отображение цены: {result}")
             return result
 
     def get_has_referral_discount(self, obj):
         user = self.context.get('user')
         has_discount = bool(user and getattr(user, 'referred_by', None))
-        logger.info(f"has_referral_discount: user={user}, has_discount={has_discount}, referred_by={getattr(user, 'referred_by', None) if user else None}")
+        logger.warning(f"has_referral_discount: user={user}, has_discount={has_discount}, referred_by={getattr(user, 'referred_by', None) if user else None}")
         return has_discount
 
 
