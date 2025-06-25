@@ -48,13 +48,13 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
             price = base_price
             logger.warning(f"Скидка тарифа не применяется: {price}")
         
-        # Скидка только если у пользователя есть хотя бы один реферал
-        if user and hasattr(user, 'referrals') and user.referrals.exists():
+        # Скидка только если у пользователя есть хотя бы один реферал и не использована скидка
+        if user and hasattr(user, 'referrals') and user.referrals.exists() and not getattr(user, 'referral_discount_used', False):
             old_price = price
             price = price * Decimal('0.90')
             logger.warning(f"Применена скидка реферала: {old_price} -> {price} (user.referrals_count={user.referrals.count()})")
         else:
-            logger.warning(f"Скидка реферала не применяется: user={user}, referrals_count={user.referrals.count() if user else None}")
+            logger.warning(f"Скидка реферала не применяется: user={user}, referrals_count={user.referrals.count() if user else None}, referral_discount_used={getattr(user, 'referral_discount_used', None)}")
         
         result = str(round(price, 2))
         logger.warning(f"Итоговая цена: {result}")
@@ -70,7 +70,7 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
         else:
             price = base_price
         
-        if user and hasattr(user, 'referrals') and user.referrals.exists():
+        if user and hasattr(user, 'referrals') and user.referrals.exists() and not getattr(user, 'referral_discount_used', False):
             result = f"~{price}$~ {round(price * Decimal('0.90'), 2)}$"
             logger.warning(f"Отображение скидки реферала: {result}")
             return result
@@ -81,8 +81,8 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
 
     def get_has_referral_discount(self, obj):
         user = self.context.get('user')
-        has_discount = bool(user and hasattr(user, 'referrals') and user.referrals.exists())
-        logger.warning(f"has_referral_discount: user={user}, has_discount={has_discount}, referrals_count={user.referrals.count() if user else None}")
+        has_discount = bool(user and hasattr(user, 'referrals') and user.referrals.exists() and not getattr(user, 'referral_discount_used', False))
+        logger.warning(f"has_referral_discount: user={user}, has_discount={has_discount}, referrals_count={user.referrals.count() if user else None}, referral_discount_used={getattr(user, 'referral_discount_used', None)}")
         return has_discount
 
 
@@ -101,14 +101,17 @@ class BuySubscriptionSerializer(serializers.Serializer):
             current_price = plan.discount_price
         else:
             current_price = base_price
-        # Скидка только если у пользователя есть хотя бы один реферал
-        if hasattr(user, 'referrals') and user.referrals.exists():
+        # Скидка только если у пользователя есть хотя бы один реферал и не использована скидка
+        discount_applied = False
+        if hasattr(user, 'referrals') and user.referrals.exists() and not getattr(user, 'referral_discount_used', False):
             current_price = current_price * Decimal('0.90')
+            discount_applied = True
         if user.balance < current_price:
             raise serializers.ValidationError("Недостаточно средств.")
 
         attrs['plan'] = plan
         attrs['price'] = current_price
+        attrs['referral_discount_applied'] = discount_applied
 
         return attrs
 

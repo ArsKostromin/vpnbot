@@ -49,7 +49,7 @@ class BuySubscriptionView(APIView):
         plan = serializer.validated_data['plan']
         logger.debug(f"Выбранный план: ID={plan.id}, vpn_type={plan.vpn_type}, duration={plan.duration}")
 
-        price = plan.get_current_price()
+        price = serializer.validated_data['price']
         logger.debug(f"Цена плана (со скидкой если есть): {price}")
 
         # Проверка на активную подписку того же типа (только если не country)
@@ -67,18 +67,11 @@ class BuySubscriptionView(APIView):
                     "uuid": str(same_type_sub.uuid)
                 }, status=status.HTTP_409_CONFLICT)
 
-        # Новая подписка
-        # --- Логика одноразовой скидки для пригласившего ---
-        discount_applied = False
-        discount_amount = 0
-        # Скидка только для пригласившего, если у него есть хотя бы один приглашённый и скидка не использована
-        if user.referrals.exists() and not user.referral_discount_used:
-            discount_amount = price * Decimal('0.10')
-            price = price - discount_amount
+        # --- Одноразовая скидка для пригласившего ---
+        if serializer.validated_data.get('referral_discount_applied'):
             user.referral_discount_used = True
             user.save()
-            discount_applied = True
-            logger.info(f"Пользователю {user.telegram_id} применена одноразовая скидка 10% на покупку подписки.")
+            logger.info(f"Пользователь {user.telegram_id} использовал одноразовую скидку 10% на покупку подписки.")
         # --- Конец логики скидки ---
 
         if user.balance < price:
