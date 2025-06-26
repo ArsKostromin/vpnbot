@@ -66,6 +66,9 @@ class VPNUser(AbstractBaseUser, PermissionsMixin):
     # Флаг: выдавался ли уже промокод
     promo_code_issued = models.BooleanField(default=False, verbose_name="Промокод выдан")
 
+    # Robokassa recurring ID для автосписаний
+    robokassa_recurring_id = models.CharField(max_length=128, blank=True, null=True, verbose_name="Robokassa Recurring ID")
+
     # Указываем кастомный менеджер
     objects = VPNUserManager()
 

@@ -88,6 +88,16 @@ def payment_result(request):
     payment.save()
     logger.warning(f"[payment_result] Платёж {id} успешно применён и сохранён")
 
+    # --- Сохраняем recurring_id, если Robokassa его вернула ---
+    recurring_id = request.data.get("RecurringID") or request.data.get("recurring_id")
+    if recurring_id:
+        payment.user.robokassa_recurring_id = recurring_id
+        payment.user.save(update_fields=["robokassa_recurring_id"])
+        logger.warning(f"[payment_result] Сохранён Robokassa Recurring ID для пользователя {payment.user.telegram_id}: {recurring_id}")
+    else:
+        logger.warning(f"[payment_result] Recurring ID не получен для пользователя {payment.user.telegram_id}")
+    # --- конец блока recurring_id ---
+
     notify_payload = {
         "tg_id": payment.user.telegram_id,
         "amount": float(payment.amount),
