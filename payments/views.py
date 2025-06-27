@@ -61,6 +61,7 @@ def payment_result(request):
     """
     Обработка callback'а от Robokassa после оплаты.
     """
+    logger.warning(f"[payment_result] Полное тело запроса от Robokassa: {dict(request.data)}")
     out_sum = request.data.get("OutSum")
     id = request.data.get("InvId")
     received_signature = request.data.get("SignatureValue", "").strip()

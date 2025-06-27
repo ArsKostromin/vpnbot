@@ -81,28 +81,36 @@ class BuySubscriptionView(APIView):
         user_uuid = uuid4()
         logger.debug(f"Сгенерирован UUID: {user_uuid}")
 
-        # Выбор сервера
+        # Получаем список серверов (по стране или все активные)
         if plan.vpn_type == "country":
             country = request.data.get("country")
             if not country:
                 return Response({"error": "Не указана страна"}, status=status.HTTP_400_BAD_REQUEST)
-            server = get_least_loaded_server_by_country(country)
+            servers = list(VPNServer.objects.filter(is_active=True, country=country))
+            if not servers:
+                servers = list(VPNServer.objects.filter(is_active=True))
         else:
-            server = get_least_loaded_server()
+            servers = list(VPNServer.objects.filter(is_active=True))
 
-        if not server:
+        if not servers:
             logger.error("Нет доступных серверов")
             return Response({"error": "Нет доступных серверов"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
-        logger.debug(f"Выбран сервер: {server.name} ({server.country})")
+        # Пробуем создать VLESS на каждом сервере по очереди
+        vless_result = None
+        selected_server = None
+        for server in servers:
+            vless_result = create_vless(server, user_uuid)
+            logger.debug(f"Результат создания VLESS на сервере {server.name}: {vless_result}")
+            if vless_result["success"]:
+                selected_server = server
+                break
+            else:
+                logger.warning(f"Сервер {server.name} не ответил или ошибка: {vless_result.get('message')}")
 
-        # Генерация VLESS
-        vless_result = create_vless(server, user_uuid)
-        logger.debug(f"Результат создания VLESS: {vless_result}")
-
-        if not vless_result["success"]:
-            logger.error(f"Ошибка создания VLESS: {vless_result}")
-            return Response({"error": "Ошибка создания VLESS"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        if not vless_result or not vless_result["success"]:
+            logger.error("Не удалось создать VLESS ни на одном сервере")
+            return Response({"error": "Нет доступных серверов"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
         delta = get_duration_delta(plan.duration)
         if not delta:
@@ -120,7 +128,7 @@ class BuySubscriptionView(APIView):
             end_date=end_date,
             vless=vless_result["vless_link"],
             uuid=user_uuid,
-            server=server
+            server=selected_server
         )
         logger.info(f"Создана новая подписка: {subscription}")
 
