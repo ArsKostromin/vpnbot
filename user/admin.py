@@ -106,7 +106,7 @@ class VPNUserAdmin(admin.ModelAdmin):
             'classes': ('collapse',),
             'description': 'Управление статусом бана пользователя'
         }),
-        ('Системная информация', {'fields': ('date_joined', 'uuid', 'last_login', 'banned_at')}),
+        ('Системная информация', {'fields': ('date_joined', 'uuid', 'last_login', 'banned_at', 'robokassa_recurring_id')}),
         ('Разрешения', {'fields': ('is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Дополнительно', {'fields': ('view_logs_link',)}),
     )
