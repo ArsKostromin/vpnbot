@@ -65,3 +65,20 @@ class UserBalanceAndLinkAPIView(APIView):
 
         serializer = UserInfoSerializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ToggleAutoRenewAPIView(APIView):
+    """
+    Включение/отключение автопродления по id подписки и telegram_id.
+    """
+    def post(self, request, subscription_id):
+        telegram_id = request.data.get("telegram_id")
+        if not telegram_id:
+            return Response({"error": "telegram_id обязателен"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            sub = Subscription.objects.get(id=subscription_id, user__telegram_id=telegram_id)
+        except Subscription.DoesNotExist:
+            return Response({"error": "Подписка не найдена"}, status=status.HTTP_404_NOT_FOUND)
+        sub.auto_renew = not sub.auto_renew
+        sub.save()
+        return Response({"auto_renew": sub.auto_renew})
