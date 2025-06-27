@@ -27,6 +27,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscription
         fields = [
+            'id',
             'vpn_type',
             'duration',
             'price',
