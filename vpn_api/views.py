@@ -90,7 +90,12 @@ class BuySubscriptionView(APIView):
             if not servers:
                 servers = list(VPNServer.objects.filter(is_active=True))
         else:
-            servers = list(VPNServer.objects.filter(is_active=True))
+            # Используем функцию выбора наименее загруженного сервера
+            selected_server = get_least_loaded_server()
+            if not selected_server:
+                logger.error("Нет доступных серверов")
+                return Response({"error": "Нет доступных серверов"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            servers = [selected_server]
 
         if not servers:
             logger.error("Нет доступных серверов")
