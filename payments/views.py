@@ -39,7 +39,7 @@ def create_payment(request):
         return Response({"error": "telegram_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        amount = int(amount)
+        amount = float(amount)
     except (ValueError, TypeError):
         return Response({"error": "Некорректная сумма."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -47,7 +47,7 @@ def create_payment(request):
 
     payment = Payment.objects.create(
         user=user,
-        amount=Decimal(amount),
+        amount=Decimal(str(amount)),
         status=Payment.Status.PENDING,
         currency='Рубли'
     )

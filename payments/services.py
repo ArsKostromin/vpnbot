@@ -47,6 +47,9 @@ def generate_robokassa_payment_link(payment: Payment) -> str:
     base_url = "https://auth.robokassa.ru/Merchant/Index.aspx"
     params = f"MerchantLogin={login}&OutSum={amount_rub_str}&InvId={payment.id}&SignatureValue={signature}"
 
+    # Добавляем параметр для рекуррентных платежей
+    params += "&Recurring=Y"
+
     if is_test:
         params += "&IsTest=1"
 
