@@ -63,7 +63,7 @@ def payment_result(request):
     """
     logger.warning(f"[payment_result] Полное тело запроса от Robokassa: {dict(request.data)}")
     out_sum = request.data.get("OutSum")
-    id = request.data.get("InvoiceID") or request.data.get("InvId")  # Поддержка старого и нового API
+    id = request.data.get("InvId")
     received_signature = request.data.get("SignatureValue", "").strip()
 
     if not out_sum or not id or not received_signature:
@@ -89,14 +89,23 @@ def payment_result(request):
     payment.save()
     logger.warning(f"[payment_result] Платёж {id} успешно применён и сохранён")
 
-    # --- Сохраняем ID первого платежа для рекуррентных платежей ---
-    # Для рекуррентных платежей сохраняем ID первого платежа (материнского)
-    if request.data.get("Recurring") == "true":
-        payment.user.robokassa_recurring_id = payment.id
+    # --- Сохраняем recurring_id, если Robokassa его вернула ---
+    # Для рекуррентных платежей Robokassa возвращает ID материнского платежа
+    # который нужно использовать как PreviousInvoiceID в дочерних платежах
+    recurring_id = request.data.get("RecurringID") or request.data.get("recurring_id")
+    if recurring_id:
+        payment.user.robokassa_recurring_id = recurring_id
         payment.user.save(update_fields=["robokassa_recurring_id"])
-        logger.warning(f"[payment_result] Сохранён ID первого платежа для рекуррентных платежей пользователя {payment.user.telegram_id}: {payment.id}")
+        logger.warning(f"[payment_result] Сохранён Robokassa Recurring ID для пользователя {payment.user.telegram_id}: {recurring_id}")
     else:
-        logger.warning(f"[payment_result] Это не рекуррентный платёж для пользователя {payment.user.telegram_id}")
+        # Если RecurringID не пришёл, но платёж был с параметром Recurring=true,
+        # то используем ID текущего платежа как материнский
+        if "Recurring=true" in request.get_full_path() or request.data.get("Recurring") == "true":
+            payment.user.robokassa_recurring_id = str(payment.id)
+            payment.user.save(update_fields=["robokassa_recurring_id"])
+            logger.warning(f"[payment_result] Сохранён ID материнского платежа для пользователя {payment.user.telegram_id}: {payment.id}")
+        else:
+            logger.warning(f"[payment_result] Recurring ID не получен для пользователя {payment.user.telegram_id}")
     # --- конец блока recurring_id ---
 
     notify_payload = {

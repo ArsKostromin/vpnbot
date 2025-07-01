@@ -41,12 +41,15 @@ def generate_robokassa_payment_link(payment: Payment) -> str:
         payment.currency = "USD"
         payment.save(update_fields=["currency"])
 
-    # Используем новый API Robokassa
+    # Формируем подпись для рекуррентного платежа
     signature_raw = f"{login}:{amount_rub_str}:{payment.id}:{password1}"
     signature = hashlib.md5(signature_raw.encode('utf-8')).hexdigest()
 
     base_url = "https://auth.robokassa.ru/Merchant/Index.aspx"
-    params = f"MerchantLogin={login}&InvoiceID={payment.id}&OutSum={amount_rub_str}&SignatureValue={signature}&Description=Пополнение баланса VPN&Recurring=true"
+    params = f"MerchantLogin={login}&OutSum={amount_rub_str}&InvId={payment.id}&SignatureValue={signature}"
+
+    # Добавляем параметры для рекуррентных платежей согласно документации
+    params += "&Recurring=true&Description=Пополнение баланса VPN"
 
     if is_test:
         params += "&IsTest=1"
@@ -75,10 +78,6 @@ def robokassa_recurring_charge(user, amount_rub):
 
     try:
         # Создаём новый платёж для дочернего списания
-        from payments.models import Payment
-        from decimal import Decimal
-        
-        # Создаём новый платёж
         child_payment = Payment.objects.create(
             user=user,
             amount=Decimal(str(amount_rub)),
@@ -86,30 +85,33 @@ def robokassa_recurring_charge(user, amount_rub):
             currency='Рубли'
         )
         
-        # Формируем подпись для дочернего платежа
-        signature_raw = f"{settings.ROBOKASSA_LOGIN}:{amount_rub}:{child_payment.id}:{settings.ROBOKASSA_PASSWORD1}"
-        signature = hashlib.md5(signature_raw.encode('utf-8')).hexdigest()
-        
+        # Формируем данные для дочернего платежа согласно документации
         data = {
             "MerchantLogin": settings.ROBOKASSA_LOGIN,
-            "InvoiceID": child_payment.id,
-            "PreviousInvoiceID": recurring_id,  # ID первого платежа
+            "InvoiceID": child_payment.id,  # Новый ID для дочернего платежа
+            "PreviousInvoiceID": recurring_id,  # ID материнского платежа
             "Description": "Автопополнение баланса VPN",
-            "SignatureValue": signature,
             "OutSum": str(amount_rub),
+            "SignatureValue": hashlib.md5(
+                f"{settings.ROBOKASSA_LOGIN}:{amount_rub}:{child_payment.id}:{settings.ROBOKASSA_PASSWORD1}".encode('utf-8')
+            ).hexdigest()
         }
         
+        # Отправляем запрос на специальный URL для рекуррентных платежей
         response = requests.post("https://auth.robokassa.ru/Merchant/Recurring", data=data, timeout=10)
         logger.warning(f"[robokassa_recurring_charge] Ответ Robokassa: {response.status_code} {response.text}")
         
         if response.status_code == 200 and "OK" in response.text.upper():
             logger.warning(f"[robokassa_recurring_charge] Успешное автосписание для пользователя {user.telegram_id}")
-            # Помечаем платёж как успешный
+            # Обновляем статус платежа
             child_payment.status = Payment.Status.SUCCESS
             child_payment.save()
             return True
         else:
             logger.warning(f"[robokassa_recurring_charge] Не удалось списать с карты: {response.text}")
+            # Обновляем статус платежа на неуспешный
+            child_payment.status = Payment.Status.FAILED
+            child_payment.save()
             return False
     except Exception as e:
         logger.warning(f"[robokassa_recurring_charge] Ошибка при автосписании: {e}")
