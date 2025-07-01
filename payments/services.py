@@ -41,23 +41,11 @@ def generate_robokassa_payment_link(payment: Payment) -> str:
         payment.currency = "USD"
         payment.save(update_fields=["currency"])
 
-    # InvoiceID — это ID платежа в нашей системе
-    invoice_id = payment.id
-    description = "Пополнение баланса VPN"
-
-    # Формируем подпись по схеме MerchantLogin:OutSum:InvoiceID:Password1
-    signature_raw = f"{login}:{amount_rub_str}:{invoice_id}:{password1}"
+    signature_raw = f"{login}:{amount_rub_str}:{payment.id}:{password1}"
     signature = hashlib.md5(signature_raw.encode('utf-8')).hexdigest()
 
     base_url = "https://auth.robokassa.ru/Merchant/Index.aspx"
-    params = (
-        f"MerchantLogin={login}"
-        f"&OutSum={amount_rub_str}"
-        f"&InvoiceID={invoice_id}"
-        f"&Description={description}"
-        f"&SignatureValue={signature}"
-        f"&Recurring=true"
-    )
+    params = f"MerchantLogin={login}&OutSum={amount_rub_str}&InvId={payment.id}&SignatureValue={signature}"
 
     if is_test:
         params += "&IsTest=1"
