@@ -44,28 +44,11 @@ def generate_robokassa_payment_link(payment: Payment) -> str:
     signature_raw = f"{login}:{amount_rub_str}:{payment.id}:{password1}"
     signature = hashlib.md5(signature_raw.encode('utf-8')).hexdigest()
 
-    description = "Подписка на VPN"
-    culture = "ru"
-    email = getattr(payment.user, "email", "")
-    shp_userid = payment.user.id if hasattr(payment.user, "id") else ""
-    params = (
-        f"MerchantLogin={login}"
-        f"&OutSum={amount_rub_str}"
-        f"&InvId={payment.id}"
-        f"&Description={description}"
-        f"&SignatureValue={signature}"
-        f"&Recurring=True"
-        f"&RecurringType=auto"
-        f"&Culture={culture}"
-    )
-    if email:
-        params += f"&Email={email}"
-    if shp_userid:
-        params += f"&Shp_userid={shp_userid}"
+    base_url = "https://auth.robokassa.ru/Merchant/Index.aspx"
+    params = f"MerchantLogin={login}&OutSum={amount_rub_str}&InvId={payment.id}&SignatureValue={signature}&Recurring=True&RecurringType=auto&Culture=ru"
+
     if is_test:
         params += "&IsTest=1"
-
-    base_url = "https://auth.robokassa.ru/Merchant/Index.aspx"
 
     return f"{base_url}?{params}"
 
