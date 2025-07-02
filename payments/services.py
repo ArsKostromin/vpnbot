@@ -41,12 +41,21 @@ def generate_robokassa_payment_link(payment: Payment) -> str:
         payment.currency = "USD"
         payment.save(update_fields=["currency"])
 
+    # Формируем подпись для первого (материнского) платежа
     signature_raw = f"{login}:{amount_rub_str}:{payment.id}:{password1}"
     signature = hashlib.md5(signature_raw.encode('utf-8')).hexdigest()
 
     base_url = "https://auth.robokassa.ru/Merchant/Index.aspx"
-    params = f"MerchantLogin={login}&OutSum={amount_rub_str}&InvId={payment.id}&SignatureValue={signature}&Recurring=True&RecurringType=auto&Culture=ru&Description=Подписка на VPN"
-
+    params = (
+        f"MerchantLogin={login}"
+        f"&OutSum={amount_rub_str}"
+        f"&InvId={payment.id}"
+        f"&Description=Подписка на VPN"
+        f"&SignatureValue={signature}"
+        f"&Recurring=true"
+        f"&RecurringType=auto"
+        f"&Culture=ru"
+    )
     if is_test:
         params += "&IsTest=1"
 
@@ -64,12 +73,12 @@ def verify_robokassa_signature(out_sum: str, id: str, received_signature: str) -
 
 def robokassa_recurring_charge(user, amount_rub):
     """
-    Пытается списать сумму с карты пользователя через Robokassa по recurring_id.
+    Пытается списать сумму с карты пользователя через Robokassa по recurring_id (материнский InvoiceID).
     Возвращает True при успехе, иначе False.
     """
     recurring_id = getattr(user, 'robokassa_recurring_id', None)
     if not recurring_id:
-        logger.warning(f"[robokassa_recurring_charge] Нет recurring_id для пользователя {user.telegram_id}")
+        logger.warning(f"[robokassa_recurring_charge] Нет recurring_id для пользователя {getattr(user, 'telegram_id', None)}")
         return False
 
     try:
@@ -80,32 +89,31 @@ def robokassa_recurring_charge(user, amount_rub):
             status=Payment.Status.PENDING,
             currency='Рубли'
         )
-        
-        # Формируем данные для дочернего платежа согласно документации
+
+        # Формируем подпись для дочернего платежа (без PreviousInvoiceID!)
+        signature_raw = f"{settings.ROBOKASSA_LOGIN}:{amount_rub}:{child_payment.id}:{settings.ROBOKASSA_PASSWORD1}"
+        signature = hashlib.md5(signature_raw.encode('utf-8')).hexdigest()
+
         data = {
             "MerchantLogin": settings.ROBOKASSA_LOGIN,
             "InvoiceID": child_payment.id,  # Новый ID для дочернего платежа
             "PreviousInvoiceID": recurring_id,  # ID материнского платежа
-            "Description": "Автопополнение баланса VPN",
+            "Description": "Автосписание за VPN",
             "OutSum": str(amount_rub),
-            "SignatureValue": hashlib.md5(
-                f"{settings.ROBOKASSA_LOGIN}:{amount_rub}:{child_payment.id}:{settings.ROBOKASSA_PASSWORD1}".encode('utf-8')
-            ).hexdigest()
+            "SignatureValue": signature
         }
-        
+
         # Отправляем запрос на специальный URL для рекуррентных платежей
         response = requests.post("https://auth.robokassa.ru/Merchant/Recurring", data=data, timeout=10)
         logger.warning(f"[robokassa_recurring_charge] Ответ Robokassa: {response.status_code} {response.text}")
-        
+
         if response.status_code == 200 and "OK" in response.text.upper():
-            logger.warning(f"[robokassa_recurring_charge] Успешное автосписание для пользователя {user.telegram_id}")
-            # Обновляем статус платежа
+            logger.warning(f"[robokassa_recurring_charge] Успешное автосписание для пользователя {getattr(user, 'telegram_id', None)}")
             child_payment.status = Payment.Status.SUCCESS
             child_payment.save()
             return True
         else:
             logger.warning(f"[robokassa_recurring_charge] Не удалось списать с карты: {response.text}")
-            # Обновляем статус платежа на неуспешный
             child_payment.status = Payment.Status.FAILED
             child_payment.save()
             return False
