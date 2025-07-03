@@ -96,6 +96,9 @@ def robokassa_recurring_charge(user, amount_rub):
             "SignatureValue": signature
         }
 
+        # Логируем параметры, которые отправляем в Robokassa
+        logger.warning(f"[robokassa_recurring_charge] Отправляем в Robokassa: {data}")
+
         # Отправляем запрос на специальный URL для рекуррентных платежей
         response = requests.post("https://auth.robokassa.ru/Merchant/Recurring", data=data, timeout=10)
         logger.warning(f"[robokassa_recurring_charge] Ответ Robokassa: {response.status_code} {response.text}")
