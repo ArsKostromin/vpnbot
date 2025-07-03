@@ -79,53 +79,8 @@ def check_expired_subscriptions():
                 logger.warning(f"[auto_renew] Недостаточно средств для автопродления с баланса у пользователя {user.telegram_id}, пытаемся списать с карты через Robokassa...")
                 success = robokassa_recurring_charge(user, price)
                 if success:
-                    # Пополняем баланс и пробуем ещё раз автопродлить
-                    user.refresh_from_db()
-                    user.balance += price
-                    user.save()
-                    logger.warning(f"[auto_renew] Баланс пополнен через Robokassa, повторяем автопродление для пользователя {user.telegram_id}")
-                    # Рекурсивно пробуем ещё раз (только один раз)
-                    # --- Копируем логику автопродления ---
-                    from uuid import uuid4
-                    from .utils import create_vless, get_duration_delta
-                    from .services import get_least_loaded_server
-
-                    if plan.vpn_type == "country":
-                        server = sub.server or get_least_loaded_server()
-                    else:
-                        server = get_least_loaded_server()
-
-                    if not server:
-                        logger.warning("[auto_renew] Нет доступных серверов для автопродления после Robokassa!")
-                        continue
-
-                    user_uuid = uuid4()
-                    vless_result = create_vless(server, user_uuid)
-                    if not vless_result["success"]:
-                        logger.warning(f"[auto_renew] Ошибка создания VLESS после Robokassa: {vless_result}")
-                        continue
-
-                    delta = get_duration_delta(plan.duration)
-                    if not delta:
-                        logger.warning(f"[auto_renew] Неизвестная длительность плана после Robokassa: {plan.duration}")
-                        continue
-
-                    start_date = now
-                    end_date = start_date + delta
-
-                    Subscription.objects.create(
-                        user=user,
-                        plan=plan,
-                        start_date=start_date,
-                        end_date=end_date,
-                        vless=vless_result["vless_link"],
-                        uuid=user_uuid,
-                        server=server,
-                        auto_renew=True
-                    )
-                    user.balance -= price
-                    user.save()
-                    logger.warning(f"[auto_renew] Подписка успешно продлена для пользователя {user.telegram_id} через Robokassa автосписание")
+                    logger.warning(f"[auto_renew] Запрос на автосписание отправлен для пользователя {user.telegram_id}. Ждём подтверждения от Robokassa.")
+                    # Больше ничего не делаем! Ждём колбэка от Robokassa для пополнения баланса и продления подписки
                 else:
                     sub.auto_renew = False
                     sub.save()
