@@ -92,7 +92,7 @@ def payment_result(request):
     # --- Сохраняем recurring_id, если Robokassa его вернула ---
     # Для рекуррентных платежей Robokassa возвращает ID материнского платежа
     # который нужно использовать как PreviousInvoiceID в дочерних платежах
-    recurring_id = request.data.get("InvoiceID") or request.data.get("recurring_id")
+    recurring_id = request.data.get("InvoiceID") or request.data.get("InvId")
     if recurring_id:
         payment.user.robokassa_recurring_id = recurring_id
         payment.user.save(update_fields=["robokassa_recurring_id"])
