@@ -65,8 +65,9 @@ def verify_robokassa_signature(out_sum: str, id: str, received_signature: str) -
 
 def robokassa_recurring_charge(user, amount_rub):
     """
-    Пытается списать сумму с карты пользователя через Robokassa по recurring_id (материнский InvoiceID).
-    Возвращает True при успехе, иначе False.
+    Пытается инициировать автосписание с карты пользователя через Robokassa по recurring_id (материнский InvoiceID).
+    Возвращает True, если запрос отправлен успешно (но не факт, что деньги списаны!).
+    Фактическое пополнение баланса и продление подписки происходит только после колбэка от Robokassa.
     """
     recurring_id = getattr(user, 'robokassa_recurring_id', None)
     if not recurring_id:
@@ -99,13 +100,12 @@ def robokassa_recurring_charge(user, amount_rub):
         response = requests.post("https://auth.robokassa.ru/Merchant/Recurring", data=data, timeout=10)
         logger.warning(f"[robokassa_recurring_charge] Ответ Robokassa: {response.status_code} {response.text}")
 
+        # Не меняем статус платежа и не пополняем баланс! Ждём колбэка от Robokassa
         if response.status_code == 200 and "OK" in response.text.upper():
-            logger.warning(f"[robokassa_recurring_charge] Успешное автосписание для пользователя {getattr(user, 'telegram_id', None)}")
-            child_payment.status = Payment.Status.SUCCESS
-            child_payment.save()
+            logger.warning(f"[robokassa_recurring_charge] Запрос на автосписание отправлен для пользователя {getattr(user, 'telegram_id', None)}. Ждём подтверждения от Robokassa.")
             return True
         else:
-            logger.warning(f"[robokassa_recurring_charge] Не удалось списать с карты: {response.text}")
+            logger.warning(f"[robokassa_recurring_charge] Не удалось инициировать автосписание: {response.text}")
             child_payment.status = Payment.Status.FAILED
             child_payment.save()
             return False
