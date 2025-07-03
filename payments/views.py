@@ -66,7 +66,6 @@ def payment_result(request):
     logger.warning(f"[payment_result] request.data: {dict(request.data)}")
     logger.warning(f"[payment_result] request.POST: {dict(request.POST)}")
     logger.warning(f"[payment_result] request.GET: {dict(request.GET)}")
-    logger.warning(f"[payment_result] request.body (raw): {request.body}")
     logger.warning(f"[payment_result] request.META: {request.META}")
     out_sum = request.data.get("OutSum")
     id = request.data.get("InvId")
