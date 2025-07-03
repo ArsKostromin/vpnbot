@@ -94,6 +94,57 @@ def payment_result(request):
     payment.save()
     logger.warning(f"[payment_result] Платёж {id} успешно применён и сохранён")
 
+    # --- АВТОПРОДЛЕНИЕ ПОДПИСКИ ПОСЛЕ АВТОСПИСАНИЯ ---
+    from vpn_api.models import Subscription
+    from vpn_api.utils import create_vless, get_duration_delta
+    from vpn_api.services import get_least_loaded_server, get_least_loaded_server_by_country
+    from django.utils import timezone
+    from uuid import uuid4
+
+    # Проверяем, что это автосписание (есть recurring_id и нет обычного платежа)
+    is_recurring = payment.user.robokassa_recurring_id and payment.id != int(payment.user.robokassa_recurring_id)
+    if is_recurring:
+        # Ищем истёкшую подписку с auto_renew
+        expired_sub = Subscription.objects.filter(user=payment.user, is_active=False, auto_renew=True).order_by('-end_date').first()
+        if expired_sub and expired_sub.plan:
+            plan = expired_sub.plan
+            price = plan.get_current_price()
+            if payment.user.balance >= price:
+                # Выбор сервера
+                if plan.vpn_type == "country":
+                    server = expired_sub.server or get_least_loaded_server()
+                else:
+                    server = get_least_loaded_server()
+                if server:
+                    user_uuid = uuid4()
+                    vless_result = create_vless(server, user_uuid)
+                    if vless_result["success"]:
+                        delta = get_duration_delta(plan.duration)
+                        start_date = timezone.now()
+                        end_date = start_date + delta
+                        Subscription.objects.create(
+                            user=payment.user,
+                            plan=plan,
+                            start_date=start_date,
+                            end_date=end_date,
+                            vless=vless_result["vless_link"],
+                            uuid=user_uuid,
+                            server=server,
+                            auto_renew=True
+                        )
+                        payment.user.balance -= price
+                        payment.user.save()
+                        logger.warning(f"[auto_renew] Подписка успешно продлена после автосписания для пользователя {payment.user.telegram_id}")
+                    else:
+                        logger.warning(f"[auto_renew] Ошибка создания VLESS: {vless_result}")
+                else:
+                    logger.warning(f"[auto_renew] Нет доступных серверов для автопродления!")
+            else:
+                logger.warning(f"[auto_renew] Недостаточно средств для автопродления после автосписания!")
+        else:
+            logger.warning(f"[auto_renew] Не найдена истёкшая подписка с auto_renew для пользователя {payment.user.telegram_id}")
+    # --- конец блока автопродления ---
+
     # --- Сохраняем recurring_id, если Robokassa его вернула ---
     # Для рекуррентных платежей Robokassa возвращает ID материнского платежа
     # который нужно использовать как PreviousInvoiceID в дочерних платежах
