@@ -87,14 +87,20 @@ def robokassa_recurring_charge(user, amount_rub):
         signature_raw = f"{settings.ROBOKASSA_LOGIN}:{amount_rub}:{child_payment.id}:{settings.ROBOKASSA_PASSWORD1}"
         signature = hashlib.md5(signature_raw.encode('utf-8')).hexdigest()
 
+        email = getattr(user, "email", "")
+        description = "Подписка на VPN"
+        culture = "ru"
         data = {
             "MerchantLogin": settings.ROBOKASSA_LOGIN,
             "InvoiceID": child_payment.id,  # Новый ID для дочернего платежа
             "PreviousInvoiceID": recurring_id,  # ID материнского платежа
-            "Description": "Автосписание за VPN",
+            "Description": description,
             "OutSum": str(amount_rub),
-            "SignatureValue": signature
+            "SignatureValue": signature,
+            "Culture": culture,
         }
+        if email:
+            data["Email"] = email
 
         # Логируем параметры, которые отправляем в Robokassa
         logger.warning(f"[robokassa_recurring_charge] Отправляем в Robokassa: {data}")
