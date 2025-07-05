@@ -191,7 +191,7 @@ def success_payment(request):
     return HttpResponse("""
         <html>
             <head>
-                <title>Ошибка оплаты</title>
+                <title>Успешная оплата</title>
                 <style>
                     body { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; }
                     h1, p { text-align: center; }
@@ -206,8 +206,8 @@ def success_payment(request):
                 </script>
             </head>
             <body>
-                <h1>Оплата отменена или произошла ошибка.</h1>
-                <p>Вы будете перенаправлены...</p>
+                <h1>Оплата прошла успешно!</h1>
+                <p>Вы будете перенаправлены в бота...</p>
             </body>
         </html>
     """)
